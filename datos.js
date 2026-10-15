@@ -16,7 +16,7 @@ const ESCUELA = {
   // Datos para el pago por transferencia — ¡pon aquí tu IBAN real!
   banco: {
     titular: "Obrador Mi Segueta",
-    iban: "2100.0000.00.0000000000",
+    iban: "ES 2100.0000.00.0000000000",
     banco: "Caixa Joyeria",
     // Días que tiene el alumno para hacer la transferencia
     plazoDias: 3,
