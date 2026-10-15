@@ -1,0 +1,11 @@
+{
+  "name": "Obrador Mi Segueta",
+  "short_name": "Mi Segueta",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F1E7D7",
+  "theme_color": "#3B2A1E",
+  "icons": [
+    { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

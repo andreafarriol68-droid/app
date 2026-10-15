@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Obrador Mi Segueta</title>
+  <meta name="description" content="Obrador Mi Segueta, escuela de joyería en Palma: cursos, talleres, reservas y horario.">
+  <meta name="theme-color" content="#3B2A1E">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="modo-prueba" class="modo-prueba" hidden></div>
+  <header class="cabecera">
+    <div class="contenedor">
+      <svg class="logo" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M33 13 L26 27 L36 27 Z" fill="var(--gold)" opacity=".28"/>
+        <path d="M42 27 V17 L37 9.5" fill="none" stroke="var(--cream)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M37.5 8 L29.5 11 L33.5 14.5 Z" fill="var(--gold)" stroke="var(--gold)" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M14 27 H45" stroke="var(--cream)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M19 28 V44 M41 28 V44" stroke="var(--cream)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M19 31 Q30 37 41 31" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="28" cy="25" r="1.6" fill="none" stroke="var(--gold)" stroke-width="1.2"/>
+        <circle cx="11" cy="13" r="3.4" fill="var(--cream)"/>
+        <path d="M12 18 Q7 23 8 31" fill="none" stroke="var(--cream)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M11.5 20 L19 23 L26 25" fill="none" stroke="var(--cream)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M8 31 H15 V41" fill="none" stroke="var(--cream)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 33 H12 M8 33 V44 M5 44 H11" stroke="var(--cream)" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <p id="subtitulo" class="sello"></p>
+      <h1 id="nombre-escuela">Obrador Mi Segueta</h1>
+      <p id="lema" class="lema"></p>
+    </div>
+  </header>
+
+  <nav class="pestanas" aria-label="Secciones">
+    <div class="contenedor pestanas-lista" role="tablist">
+      <button role="tab" data-seccion="cursos" aria-selected="true">Cursos</button>
+      <button role="tab" data-seccion="talleres" aria-selected="false">Talleres</button>
+      <button role="tab" data-seccion="reservas" aria-selected="false">Mis reservas <span id="contador-reservas" class="contador" hidden></span></button>
+      <button role="tab" data-seccion="horario" aria-selected="false">Horario</button>
+    </div>
+  </nav>
+
+  <main class="contenedor">
+    <!-- CURSOS -->
+    <section id="cursos" class="seccion activa">
+      <h2>Cursos</h2>
+      <p class="intro">Cursos largos para dominar el oficio paso a paso. Grupos de máximo 6 personas, cada alumno con su propio banco de trabajo.</p>
+      <div id="lista-cursos" class="tarjetas"></div>
+    </section>
+
+    <!-- TALLERES -->
+    <section id="talleres" class="seccion" hidden>
+      <h2>Talleres</h2>
+      <p class="intro">Monográficos de fin de semana con todo el material incluido. Pulsa un día marcado en el calendario para ver el taller.</p>
+      <div class="calendario">
+        <div class="cal-cabecera">
+          <button id="mes-anterior" class="btn-icono" aria-label="Mes anterior">‹</button>
+          <h3 id="mes-titulo"></h3>
+          <button id="mes-siguiente" class="btn-icono" aria-label="Mes siguiente">›</button>
+        </div>
+        <div class="cal-semana">
+          <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+        </div>
+        <div id="cal-dias" class="cal-dias"></div>
+      </div>
+      <h3 id="titulo-talleres-mes" class="subtitulo"></h3>
+      <div id="lista-talleres" class="tarjetas"></div>
+      <div id="bloque-convenir" hidden>
+        <h3 class="subtitulo">Con fecha a convenir</h3>
+        <div id="lista-convenir" class="tarjetas"></div>
+      </div>
+    </section>
+
+    <!-- MIS RESERVAS -->
+    <section id="reservas" class="seccion" hidden>
+      <h2>Mis reservas</h2>
+      <p class="intro">Reservas hechas desde este dispositivo, en qué punto está cada una y qué te falta por hacer.</p>
+      <div id="lista-reservas"></div>
+    </section>
+
+    <!-- HORARIO -->
+    <section id="horario" class="seccion" hidden>
+      <h2>Horario de apertura</h2>
+      <div id="estado-abierto" class="estado"></div>
+      <table class="tabla-horario">
+        <tbody id="tabla-horario"></tbody>
+      </table>
+      <p id="nota-horario" class="nota"></p>
+      <div class="contacto">
+        <h3>Dónde estamos</h3>
+        <p id="direccion"></p>
+        <p id="como-llegar" class="nota"></p>
+        <p><a id="telefono"></a> · <a id="email"></a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor"><span id="pie-nombre"></span></div>
+  </footer>
+
+  <!-- VENTANA DE RESERVA -->
+  <dialog id="dialogo" class="dialogo">
+    <form id="form-reserva" method="dialog" class="paso" novalidate>
+      <button type="button" class="cerrar" aria-label="Cerrar">×</button>
+      <p class="etiqueta" id="reserva-etiqueta">Reservar plaza</p>
+      <h3 id="reserva-titulo"></h3>
+      <p id="reserva-detalle" class="detalle"></p>
+      <div id="reserva-duplicada" class="alerta" hidden></div>
+
+      <label>Nombre y apellidos
+        <input name="nombre" required autocomplete="name" minlength="3">
+        <span class="error" data-error="nombre">Escribe tu nombre y apellidos.</span>
+      </label>
+      <label>Email
+        <input name="email" type="email" required autocomplete="email" inputmode="email">
+        <span class="error" data-error="email">Revisa el email (ej.: nombre@gmail.com).</span>
+      </label>
+      <label>Teléfono
+        <input name="telefono" type="tel" required autocomplete="tel" inputmode="tel" pattern="[+0-9 ]{9,15}">
+        <span class="error" data-error="telefono">Pon un teléfono de al menos 9 cifras.</span>
+      </label>
+      <label id="campo-plazas"><span id="texto-plazas">Número de plazas</span>
+        <select name="plazas" id="reserva-plazas"></select>
+      </label>
+      <p class="total" id="fila-total">Total: <strong id="reserva-total"></strong></p>
+
+      <div class="que-pasa">
+        <p class="etiqueta">Qué pasa después</p>
+        <ol id="que-pasa-lista"></ol>
+      </div>
+      <button type="submit" class="btn btn-principal" id="btn-enviar">Enviar reserva</button>
+    </form>
+
+    <div id="paso-resultado" class="paso" hidden tabindex="-1">
+      <button type="button" class="cerrar" aria-label="Cerrar">×</button>
+      <div id="resultado"></div>
+    </div>
+  </dialog>
+
+  <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+
+  <script src="datos.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
