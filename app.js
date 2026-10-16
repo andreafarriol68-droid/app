@@ -36,7 +36,38 @@ const envioAutomatico = () => !!ESCUELA.formularioURL;
 
 // ---------- Mis reservas (guardadas en este dispositivo) ----------
 function leerReservas() {
-  try { return JSON.parse(localStorage.getItem("reservas") || "[]"); } catch { return []; }
+  let lista;
+  try { lista = JSON.parse(localStorage.getItem("reservas") || "[]"); } catch { return []; }
+  return Array.isArray(lista) ? lista.map(limpiarReserva).filter(Boolean) : [];
+}
+// Lo guardado en el dispositivo se valida al leerlo: solo pasan campos conocidos y con el tipo esperado
+// (así nada de lo guardado puede colarse como HTML en la página)
+const REF_VALIDA = /^MSG-[A-Z2-9]{5}$/;
+function limpiarReserva(r) {
+  if (!r || typeof r !== "object" || !REF_VALIDA.test(r.referencia)) return null;
+  const texto = (v) => (typeof v === "string" ? v : "");
+  const fecha = (v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const creada = texto(r.creada) && !isNaN(Date.parse(r.creada)) ? r.creada : new Date(0).toISOString();
+  return {
+    referencia: r.referencia,
+    id: texto(r.id),
+    tipo: texto(r.tipo),
+    actividad: texto(r.actividad),
+    cuando: texto(r.cuando),
+    fechaActividad: fecha(r.fechaActividad),
+    plazas: Math.min(Math.max(parseInt(r.plazas, 10) || 1, 1), 99),
+    total: Number.isFinite(r.total) && r.total >= 0 ? r.total : 0,
+    unidad: texto(r.unidad),
+    nombre: texto(r.nombre),
+    email: texto(r.email),
+    telefono: texto(r.telefono),
+    creada,
+    estado: Object.hasOwn(ESTADOS, r.estado) ? r.estado : undefined,
+    enviada: r.enviada === true,
+    pendienteEnvio: r.pendienteEnvio === true,
+    autoconfirmada: r.autoconfirmada === true,
+    ...(texto(r.pagadaEl) ? { pagadaEl: r.pagadaEl } : {}),
+  };
 }
 function guardarReservas(lista) {
   try { localStorage.setItem("reservas", JSON.stringify(lista)); } catch {}
@@ -261,6 +292,7 @@ function abrirReserva(id) {
         `Te confirmamos la plaza en ${escapar(ESCUELA.plazoConfirmacion)} desde que recibimos el pago.`,
       ]).map((t) => `<li>${t}</li>`).join("");
   $("#politica-form").innerHTML = espera ? "" : htmlPolitica();
+  $("#aviso-privacidad").innerHTML = `${escapar(ESCUELA.titularLegal || ESCUELA.nombre)} usará tus datos solo para gestionar esta ${espera ? "petición" : "reserva"}${envioAutomatico() ? " (nos llega a través del servicio Formspree)" : ""}. Puedes pedir verlos o borrarlos en ${escapar(ESCUELA.email)}. <a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a>.`;
   const btn = $("#btn-enviar");
   btn.textContent = espera
     ? (envioAutomatico() ? "Apuntarme a la lista de espera" : "Preparar email para la lista de espera")
@@ -287,11 +319,14 @@ function actualizarTotal() {
   $("#reserva-total").textContent = euros(actividadActual.precio * Number($("#reserva-plazas").value)) + unidad;
 }
 
+// Aleatoria de verdad (crypto) y sin repetir ninguna de las ya guardadas
 function generarReferencia() {
-  const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let r = "";
-  for (let i = 0; i < 5; i++) r += letras[Math.floor(Math.random() * letras.length)];
-  return "MSG-" + r;
+  const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 32 letras: 256 % 32 = 0, así no hay sesgo
+  const usadas = new Set(leerReservas().map((r) => r.referencia));
+  let ref;
+  do ref = "MSG-" + [...crypto.getRandomValues(new Uint8Array(5))].map((n) => letras[n % letras.length]).join("");
+  while (usadas.has(ref));
+  return ref;
 }
 
 // Fecha límite de pago: X días desde la reserva, pero nunca después de la víspera del primer día
@@ -335,6 +370,7 @@ function htmlPago(r) {
       <p class="pago-titular">A nombre de ${escapar(b.titular)} · ${escapar(b.banco)}</p>
     </div>
     <p class="nota">Hazla <strong>antes del ${fechaLimite(r)}</strong> y copia el concepto tal cual: así la escuela sabe que el pago es tuyo. Te confirmamos la plaza en <strong>${escapar(ESCUELA.plazoConfirmacion)}</strong> desde que la recibimos.</p>
+    <p class="nota">Este es el único IBAN de la escuela. Si alguien te da otro (por WhatsApp, email o en otra web), llámanos al <a href="${enlaceTel()}">${escapar(ESCUELA.telefono)}</a> antes de pagar.</p>
     ${htmlPolitica()}`;
 }
 
@@ -472,6 +508,7 @@ function validar(form) {
   return true;
 }
 
+const LIMITE_POR_HORA = 5;
 async function confirmarReserva(e) {
   e.preventDefault();
   const form = e.target;
@@ -479,6 +516,14 @@ async function confirmarReserva(e) {
   const btn = $("#btn-enviar");
   if (btn.disabled) return; // evita reservas dobles
   const datos = new FormData(form);
+  // Campo trampa relleno = robot: no se guarda ni se envía nada
+  if (datos.get("_gotcha")) { $("#dialogo").close(); return; }
+  // Freno contra envíos en masa desde un mismo dispositivo
+  const haceUnaHora = Date.now() - 60 * 60 * 1000;
+  if (leerReservas().filter((x) => Date.parse(x.creada) > haceUnaHora).length >= LIMITE_POR_HORA) {
+    avisar("Has hecho muchas reservas seguidas. Espera un rato o llama a la escuela.");
+    return;
+  }
   const plazas = Number(datos.get("plazas"));
   const espera = completo(actividadActual);
   const r = {
@@ -518,7 +563,7 @@ function descargarIcs(r) {
   const dias = act.tipo === "Taller" ? diasDe(act) : [r.fechaActividad];
   const m = (act.hora || act.horario || "").match(/(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/);
   const pad = (n) => String(n).padStart(2, "0");
-  const esc = (t) => String(t).replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+  const esc = (t) => String(t).replace(/([,;\\])/g, "\\$1").replace(/\r\n|\r|\n/g, "\\n");
   const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Obrador Mi Segueta//Reservas//ES", "CALSCALE:GREGORIAN"];
   dias.forEach((d, i) => {
     const base = d.replace(/-/g, "");
@@ -582,6 +627,31 @@ function pintarReservas() {
         <button class="btn btn-principal" data-ir="cursos">Ver cursos</button>
         <button class="btn btn-secundario" data-ir="talleres">Ver talleres</button>
       </div>`;
+  if (lista.length || Object.keys(leerAlumno()).length) {
+    $("#lista-reservas").insertAdjacentHTML("beforeend",
+      `<button class="enlace-quitar" data-olvidar>Olvidar mis datos en este dispositivo</button>`);
+  }
+}
+
+// Borra del dispositivo los datos del alumno y sus reservas (p. ej. en un móvil u ordenador compartido)
+function olvidarDatos() {
+  const sinLlegar = leerReservas().some((r) => r.pendienteEnvio || estadoDe(r) === "sin-enviar");
+  const aviso = "¿Borrar de este dispositivo tu nombre, email, teléfono y la lista de reservas?\n\nNo cancela ninguna plaza en la escuela."
+    + (sinLlegar ? "\n\nOjo: tienes reservas que aún no han llegado a la escuela y se perderán." : "");
+  if (!confirm(aviso)) return;
+  try { localStorage.removeItem("reservas"); localStorage.removeItem("alumno"); } catch {}
+  pintarContador();
+  pintarReservas();
+  avisar("Datos borrados de este dispositivo");
+}
+
+// Las reservas viejas se borran solas: 6 meses después de la actividad (o 1 año si no tiene fecha)
+function limpiarAntiguas() {
+  const limite = hoy(); limite.setMonth(limite.getMonth() - 6);
+  const haceUnAnio = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  const lista = leerReservas();
+  const quedan = lista.filter((r) => (r.fechaActividad ? aFecha(r.fechaActividad) >= limite : Date.parse(r.creada) >= haceUnAnio));
+  if (quedan.length !== lista.length) guardarReservas(quedan);
 }
 
 // Repinta lo que esté a la vista (ventana de reserva o lista)
@@ -606,6 +676,7 @@ function avisoModoPrueba() {
   if (/000 000/.test(ESCUELA.telefono)) falta.push("el teléfono");
   if (/Nombre del banco/.test(ESCUELA.banco.banco)) falta.push("el banco");
   if (!ESCUELA.formularioURL) falta.push("la dirección de Formspree (formularioURL)");
+  if (!ESCUELA.nif) falta.push("el titular y el NIF para la página de privacidad (titularLegal, nif)");
   if (!falta.length) return;
   console.warn("datos.js: falta " + falta.join(", "));
   const local = location.protocol === "file:" || ["localhost", "127.0.0.1", ""].includes(location.hostname);
@@ -630,6 +701,7 @@ function iniciar() {
   $("#email").textContent = ESCUELA.email;
   $("#email").href = "mailto:" + ESCUELA.email;
 
+  limpiarAntiguas();
   pintarCursos();
   pintarCalendario();
   pintarTalleresConvenir();
@@ -648,10 +720,11 @@ function iniciar() {
   window.addEventListener("online", reintentarPendientes);
 
   document.addEventListener("click", async (e) => {
-    const el = e.target.closest("[data-reservar],[data-dia],[data-copiar],[data-borrar],[data-mailto],[data-mail-enviado],[data-reintentar],[data-pagada],[data-no-pagada],[data-ics],[data-ir],.cerrar");
+    const el = e.target.closest("[data-reservar],[data-dia],[data-copiar],[data-borrar],[data-mailto],[data-mail-enviado],[data-reintentar],[data-pagada],[data-no-pagada],[data-ics],[data-ir],[data-olvidar],.cerrar");
     if (!el) return;
     const d = el.dataset;
     if (d.reservar) abrirReserva(d.reservar);
+    else if ("olvidar" in d) olvidarDatos();
     else if (d.mailto) {
       // No podemos saber si pulsó Enviar en su correo: se lo preguntamos
       el.closest(".alerta")?.querySelector(".confirmar-mail")?.removeAttribute("hidden");

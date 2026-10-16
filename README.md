@@ -40,6 +40,8 @@ flowchart TD
 ### Para que funcione de verdad (lista de la escuela)
 
 - [ ] Poner en `datos.js` el **IBAN, banco y teléfono reales**.
+- [ ] Poner en `datos.js` el **titular legal y el NIF** (`titularLegal`, `nif`): salen en la página de privacidad (`privacidad.html`).
+- [ ] En cada email de confirmación, **repetir el IBAN** de la escuela, para que el alumno pueda comprobar que es el mismo (ver `AUDITORIA-SEGURIDAD.md`).
 - [ ] Crear un formulario gratis en [Formspree](https://formspree.io), copiar su dirección (`https://formspree.io/f/...`) en `formularioURL` y hacer una reserva de prueba (la primera vez Formspree pide confirmar tu email).
 - [ ] Cuando llegue una transferencia, buscar el **concepto** (`MSG-XXXXX Nombre`) en los emails de reservas y contestar al alumno confirmando la plaza (al responder, el email va directo a él).
 - [ ] Cuando se llene un curso o taller, cambiar sus `plazas` a `0`.
@@ -56,3 +58,4 @@ En GitHub: **Settings → Pages → Branch: `main` → Save**. En un par de minu
 - **Sin conexión:** una vez abierta, la app queda guardada en el móvil (`sw.js`) y se abre aunque no haya internet. Las reservas se envían cuando vuelve la conexión.
 - **Al compartir el enlace** (WhatsApp, Instagram…) sale una vista previa con la foto de `fotos/iniciacion.jpg`. Si la publicas en otra dirección, cambia `og:url` y `og:image` en `index.html`.
 - **Si añades una foto con un nombre nuevo**, ponla también en la lista de `sw.js` y sube el número de `VERSION`.
+- **Seguridad:** las fuentes están en `fuentes/` y la página solo carga archivos propios (regla `Content-Security-Policy` en `index.html`). Si algún día añades algo de otra web (un mapa, un vídeo, otro servicio de formularios), hay que añadir su dirección a esa regla o el navegador lo bloqueará. Más detalles en `AUDITORIA-SEGURIDAD.md`.

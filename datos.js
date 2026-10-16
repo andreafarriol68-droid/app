@@ -12,6 +12,9 @@ const ESCUELA = {
   comoLlegar: "En el casco antiguo, a dos minutos de la Plaza Mayor.",
   telefono: "971 123 456",
   email: "hola@obradormisegueta.es",
+  // Datos legales para la página de privacidad (privacidad.html): titular y NIF/CIF
+  titularLegal: "",
+  nif: "",
 
   // Datos para el pago por transferencia — ¡pon aquí tu IBAN real!
   banco: {

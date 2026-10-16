@@ -2,7 +2,7 @@
 // Los cambios en datos.js y en las fotos se ven solos. Si añades una foto con
 // un nombre nuevo, ponla en ARCHIVOS y sube el número de VERSION.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = `misegueta-${VERSION}`;
 
 const ARCHIVOS = [
@@ -11,6 +11,12 @@ const ARCHIVOS = [
   "styles.css",
   "app.js",
   "datos.js",
+  "privacidad.html",
+  "privacidad.js",
+  "fuentes/marcellus.woff2",
+  "fuentes/nunito-sans.woff2",
+  "fuentes/dm-mono-400.woff2",
+  "fuentes/dm-mono-500.woff2",
   "manifest.json",
   "icono.svg",
   "icono-192.png",
@@ -45,13 +51,11 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return; // las reservas (Formspree) van siempre por internet
   const url = new URL(req.url);
-  const propio = url.origin === location.origin;
-  const fuentes = /^fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
-  if (!propio && !fuentes) return;
+  if (url.origin !== location.origin) return; // solo se guardan archivos de esta web
 
   // Fotos y fuentes: se enseña lo guardado al momento y se actualiza por detrás
   // (si cambias una foto por otra con el mismo nombre, se ve la nueva la siguiente vez)
-  if (fuentes || req.destination === "image") {
+  if (req.destination === "image" || req.destination === "font") {
     e.respondWith(
       caches.match(req).then((guardada) => {
         const nueva = fetch(req).then((resp) => guardar(req, resp));
@@ -72,7 +76,7 @@ self.addEventListener("fetch", (e) => {
 });
 
 function guardar(req, resp) {
-  if (resp.ok || resp.type === "opaque") {
+  if (resp.ok) {
     const copia = resp.clone();
     caches.open(CACHE).then((c) => c.put(req, copia));
   }
