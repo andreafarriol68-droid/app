@@ -1,0 +1,16 @@
+Fotos de ejemplo (provisionales) de Unsplash, con la Licencia de Unsplash:
+uso gratuito, también comercial, sin necesidad de atribución (https://unsplash.com/license).
+Sustitúyelas por fotos de vuestras piezas y del taller cuando las tengáis:
+guarda la foto nueva en esta carpeta con el mismo nombre, o cambia "foto" en datos.js.
+
+iniciacion.jpg    photo-1786840320404-4c1c26980075
+profesional.jpg   photo-1624588057318-5f1b2eb81012
+engaste.jpg       photo-1586104237516-5b7075e00d45
+cera.jpg          photo-1775327589376-f94584330dba
+anillo-plata.jpg  photo-1656010280162-772358d9f4ed
+boto.jpg          photo-1785809998813-ee7a68ec1346
+martillado.jpg    photo-1620968867360-5cda83d2bffd
+esmalte.jpg       photo-1624585179018-25699030cb8f
+aros.jpg          photo-1765464281313-b3844388b316
+alianzas.jpg      photo-1550368566-f9cc32d7392d
+(Cada código abre la foto en https://images.unsplash.com/<código>)

@@ -1,11 +1,17 @@
 {
   "name": "Obrador Mi Segueta",
   "short_name": "Mi Segueta",
+  "description": "Escuela de joyería en Palma: cursos, talleres, reservas y horario.",
+  "lang": "es",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#F1E7D7",
   "theme_color": "#3B2A1E",
   "icons": [
-    { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "icono.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

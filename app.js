@@ -8,6 +8,20 @@ const fechaLarga = (txt) =>
 const claveDia = (f) => `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
 const escapar = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// Iconos de línea, con el mismo trazo redondeado que el logo
+const ICONOS = {
+  calendario: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  reloj: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  duracion: '<path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 4 5.5 4 8.5s-4 4-4 8.5M16 3.5c0 4.5-4 5.5-4 8.5s4 4 4 8.5"/>',
+  anillo: '<circle cx="12" cy="14.5" r="6"/><path d="M9.6 8.9 12 4l2.4 4.9"/><path d="M10 4h4"/>',
+  grupo: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 20c0-3.3 2.4-5.8 5.5-5.8s5.5 2.5 5.5 5.8"/><circle cx="16.5" cy="9.5" r="2.4"/><path d="M15.8 14.4c2.6.2 4.7 2.4 4.7 5.6"/>',
+  email: '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+  segueta: '<path d="M6 4h11v12H6"/><path d="m6 4-1 1.5 1 1.5-1 1.5 1 1.5-1 1.5 1 1.5-1 1.5 1 1.5" stroke-width="1.1"/><path d="M17 16v5" stroke-width="3"/>',
+  soplete: '<path d="m4.5 19.5 5-5" stroke-width="3"/><path d="m9.5 14.5 5.5-5.5"/><path d="M17.5 3c1.8 1.9 2.7 3.9 1.4 5.8-1.3 1.8-3.9.6-3.4-1.7.3-1.4 1.2-2.2 2-4.1z"/>',
+};
+const icono = (nombre, clase = "icono") =>
+  `<svg class="${clase}" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[nombre]}</svg>`;
+
 function hoy() { const h = new Date(); h.setHours(0, 0, 0, 0); return h; }
 
 function avisar(texto) {
@@ -77,8 +91,11 @@ const precioHtml = (a) =>
 // plazas: 0 en datos.js = completo → se ofrece lista de espera
 const completo = (a) => a.plazas <= 0;
 const botonReservar = (a) => completo(a)
-  ? `<button class="btn btn-secundario" data-reservar="${a.id}">Lista de espera</button>`
-  : `<button class="btn btn-principal" data-reservar="${a.id}">Reservar</button>`;
+  ? `<button class="btn btn-secundario" data-reservar="${a.id}" aria-label="Lista de espera: ${escapar(a.nombre)}">Lista de espera</button>`
+  : `<button class="btn btn-principal" data-reservar="${a.id}" aria-label="Reservar: ${escapar(a.nombre)}">Reservar</button>`;
+// Foto de la pieza (opcional en datos.js)
+const fotoHtml = (a) => a.foto
+  ? `<figure class="foto"><img src="${escapar(a.foto)}" alt="${escapar(a.fotoAlt || "")}" loading="lazy" width="800" height="600"></figure>` : "";
 const estadoHtml = (a) => completo(a)
   ? `<p class="estado-plazas">Completo</p>`
   : a.estado ? `<p class="estado-plazas">${escapar(a.estado)}</p>` : "";
@@ -86,14 +103,15 @@ const estadoHtml = (a) => completo(a)
 function pintarCursos() {
   $("#lista-cursos").innerHTML = CURSOS.map((c) => `
     <article class="tarjeta">
+      ${fotoHtml(c)}
       <span class="chip">${escapar(c.tipo || "Curso")}</span>
       <h3>${escapar(c.nombre)}</h3>
       <p class="desc">${escapar(c.descripcion)}</p>
       <ul class="datos">
-        ${c.inicio ? `<li>📅 Empieza el ${fechaLarga(c.inicio)}</li>` : ""}
-        <li>🕒 ${escapar(c.horario)}</li>
-        <li>⏳ ${escapar(c.duracion)}</li>
-        <li>🎓 ${escapar(c.nivel)}</li>
+        ${c.inicio ? `<li>${icono("calendario")}Empieza el ${fechaLarga(c.inicio)}</li>` : ""}
+        <li>${icono("reloj")}${escapar(c.horario)}</li>
+        <li>${icono("duracion")}${escapar(c.duracion)}</li>
+        <li>${icono("anillo")}${escapar(c.nivel)}</li>
       </ul>
       ${estadoHtml(c)}
       <div class="precio-fila">
@@ -158,12 +176,13 @@ function tarjetaTaller(t) {
   const pasado = t.fecha && aFecha(diasDe(t).at(-1)) < hoy();
   return `
     <article class="tarjeta ${diasDe(t).includes(diaSeleccionado) ? "resaltada" : ""}" id="taller-${t.id}">
+      ${fotoHtml(t)}
       <span class="chip">${t.fecha ? fechaLarga(t.fecha) : "Fecha a convenir"}</span>
       <h3>${escapar(t.nombre)}</h3>
       <p class="desc">${escapar(t.descripcion)}</p>
       <ul class="datos">
-        <li>🕒 ${escapar(t.hora)}</li>
-        ${t.fecha ? `<li>👥 Grupo de máximo ${t.grupo || 6} personas</li>` : ""}
+        <li>${icono("reloj")}${escapar(t.hora)}</li>
+        ${t.fecha ? `<li>${icono("grupo")}Grupo de máximo ${t.grupo || 6} personas</li>` : ""}
       </ul>
       ${pasado ? "" : estadoHtml(t)}
       <div class="precio-fila">
@@ -234,14 +253,18 @@ function abrirReserva(id) {
   $("#fila-total").hidden = espera;
 
   $("#que-pasa-lista").innerHTML = (espera
-    ? ["Enviamos tu petición a la escuela.", "Si se libera una plaza, te escriben o te llaman.", "No pagas nada ahora."]
+    ? [envioAutomatico() ? "Enviamos tu petición a la escuela." : "Te preparamos un email con la petición ya escrita: lo envías tú desde tu correo.",
+        "Si se libera una plaza, te escriben o te llaman.", "No pagas nada ahora."]
     : [
-        "Enviamos tu reserva a la escuela.",
+        envioAutomatico() ? "Enviamos tu reserva a la escuela." : "Te preparamos un email con la reserva ya escrita: lo envías tú desde tu correo.",
         `Te damos los datos para la transferencia (tienes ${ESCUELA.banco.plazoDias} días).`,
-        "La escuela te confirma la plaza al recibir el pago.",
+        `Te confirmamos la plaza en ${escapar(ESCUELA.plazoConfirmacion)} desde que recibimos el pago.`,
       ]).map((t) => `<li>${t}</li>`).join("");
+  $("#politica-form").innerHTML = espera ? "" : htmlPolitica();
   const btn = $("#btn-enviar");
-  btn.textContent = espera ? "Apuntarme a la lista de espera" : "Enviar reserva";
+  btn.textContent = espera
+    ? (envioAutomatico() ? "Apuntarme a la lista de espera" : "Preparar email para la lista de espera")
+    : (envioAutomatico() ? "Enviar reserva" : "Preparar email de reserva");
   btn.disabled = false;
 
   // ¿Ya tiene una reserva de esto en este dispositivo?
@@ -285,22 +308,34 @@ function fechaLimiteDate(r) {
 const fechaLimite = (r) => fechaLimiteDate(r).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
 const plazoVencido = (r) => estadoDe(r) === "enviada" && fechaLimiteDate(r) < hoy();
 
+// IBAN sin espacios ni puntos (para copiar) y en grupos de 4 (para leer)
+const ibanCompacto = (iban) => String(iban).replace(/[\s.-]/g, "").toUpperCase();
+const ibanHtml = (iban) => ibanCompacto(iban).match(/.{1,4}/g).map((g) => `<span class="grupo">${g}</span>`).join(" ");
+
+function htmlPolitica() {
+  const lista = ESCUELA.politicaCancelacion || [];
+  return lista.length
+    ? `<details class="politica"><summary>Cambios y cancelaciones</summary><ul>${lista.map((t) => `<li>${escapar(t)}</li>`).join("")}</ul></details>`
+    : "";
+}
+
 function htmlPago(r) {
   const b = ESCUELA.banco;
-  const fila = (etq, valor, copiable) => `
+  const fila = (etq, valorHtml, copiar) => `
     <div class="pago-fila">
       <span>${etq}</span>
-      <div class="pago-valor"><strong>${escapar(valor)}</strong>${copiable ? `<button class="copiar" data-copiar="${escapar(valor)}">Copiar</button>` : ""}</div>
+      <div class="pago-valor"><strong>${valorHtml}</strong>${copiar ? `<button class="copiar" data-copiar="${escapar(copiar)}" aria-label="Copiar ${etq.toLowerCase()}">Copiar</button>` : ""}</div>
     </div>`;
+  const concepto = `${r.referencia} ${r.nombre}`;
   return `
     <div class="pago">
-      ${fila("Importe", euros(r.total) + (r.unidad ? ` ${r.unidad}` : ""), false)}
-      ${fila("Titular", b.titular, false)}
-      ${fila("IBAN", b.iban, true)}
-      ${fila("Banco", b.banco, false)}
-      ${fila("Concepto", `${r.referencia} ${r.nombre}`, true)}
+      ${fila("Importe", `${euros(r.total)}${r.unidad ? `<small>${escapar(r.unidad)}</small>` : ""}`, "")}
+      ${fila("IBAN", ibanHtml(b.iban), ibanCompacto(b.iban))}
+      ${fila("Concepto", escapar(concepto), concepto)}
+      <p class="pago-titular">A nombre de ${escapar(b.titular)} · ${escapar(b.banco)}</p>
     </div>
-    <p class="nota">Hazla <strong>antes del ${fechaLimite(r)}</strong> y copia el concepto tal cual: así la escuela sabe que el pago es tuyo.</p>`;
+    <p class="nota">Hazla <strong>antes del ${fechaLimite(r)}</strong> y copia el concepto tal cual: así la escuela sabe que el pago es tuyo. Te confirmamos la plaza en <strong>${escapar(ESCUELA.plazoConfirmacion)}</strong> desde que la recibimos.</p>
+    ${htmlPolitica()}`;
 }
 
 function textoReserva(r) {
@@ -375,13 +410,15 @@ function htmlSinEnviar(r) {
         ? "No se ha podido enviar (¿sin conexión?). Lo reintentaremos solos al volver a abrir la app, o hazlo tú ahora:"
         : "Envíala por email: se abrirá tu correo con todo ya escrito y solo tienes que pulsar Enviar."}</p>
       <div class="acciones">
-        ${envioAutomatico() ? `<button class="btn btn-principal" data-reintentar="${ref}">Reintentar envío</button>` : ""}
-        <a class="btn ${envioAutomatico() ? "btn-secundario" : "btn-principal"}" href="${enlaceEmail(r)}" data-mailto="${ref}">✉️ Enviar por email</a>
-        <a class="btn btn-secundario" href="${enlaceTel()}">📞 Llamar</a>
+        ${envioAutomatico()
+          ? `<button class="btn btn-principal" data-reintentar="${ref}">Reintentar envío</button>
+             <a class="btn btn-secundario" href="${enlaceEmail(r)}" data-mailto="${ref}">${icono("email")}Enviar por email</a>`
+          : `<a class="btn btn-principal" href="${enlaceEmail(r)}" data-mailto="${ref}">${icono("email")}Abrir mi correo</a>`}
       </div>
+      <p class="nota">¿Prefieres llamar? <a href="${enlaceTel()}" data-mailto="${ref}">${escapar(ESCUELA.telefono)}</a></p>
       <div class="confirmar-mail" data-confirmar-de="${ref}" hidden>
-        <p class="nota">¿Has pulsado Enviar en tu correo (o has llamado)?</p>
-        <button class="btn btn-secundario" data-mail-enviado="${ref}">Sí, la escuela ya lo sabe</button>
+        <p class="nota">¿Has enviado el email o has hablado con la escuela?</p>
+        <button class="btn btn-secundario" data-mail-enviado="${ref}">Sí, ya está hecho</button>
       </div>
     </div>`;
 }
@@ -396,9 +433,9 @@ function htmlProgreso(r) {
     .join("")}</ol>`;
 }
 
-// En lista de espera no hay plaza todavía: no se ofrece añadirlo al calendario
-const botonCalendario = (r) => r.fechaActividad && !actividadPasada(r) && estadoDe(r) !== "espera"
-  ? `<button class="btn btn-secundario" data-ics="${escapar(r.referencia)}">📅 Añadir a mi calendario</button>` : "";
+// Solo cuando la escuela ya tiene la reserva (no en lista de espera ni sin enviar)
+const botonCalendario = (r) => r.fechaActividad && !actividadPasada(r) && ["enviada", "pagada"].includes(estadoDe(r))
+  ? `<button class="btn btn-secundario" data-ics="${escapar(r.referencia)}">${icono("calendario")}Añadir a mi calendario</button>` : "";
 
 // Contenido de la ventana tras enviar el formulario
 function pintarResultado(r) {
@@ -412,15 +449,15 @@ function pintarResultado(r) {
          <p>Si se libera una plaza, la escuela te escribirá a <strong>${escapar(r.email)}</strong> o te llamará. No tienes que pagar nada ahora.</p>`;
   } else if (e === "sin-enviar") {
     html += `<h3>Falta un paso para guardar tu plaza</h3>${htmlProgreso(r)}${htmlSinEnviar(r)}
-      <details><summary>Ver datos para la transferencia</summary>${htmlPago(r)}</details>`;
+      <p class="nota">Cuando la escuela tenga tu reserva, te enseñamos los datos para la transferencia.</p>`;
   } else if (e === "enviada") {
-    html += `<h3>¡Reserva recibida! Ahora, la transferencia</h3>${htmlProgreso(r)}
+    html += `<h3>${r.autoconfirmada ? "Anotada como enviada." : "¡Reserva recibida!"} Ahora, la transferencia</h3>${htmlProgreso(r)}
       ${htmlPago(r)}
       <button class="btn btn-principal ancho" data-pagada="${ref}">Ya he hecho la transferencia</button>
       <p class="nota centrada">¿La harás luego? Todo queda guardado en <strong>Mis reservas</strong>.</p>`;
   } else {
     html += `<h3>¡Gracias! Pago anotado</h3>${htmlProgreso(r)}
-      <p>La escuela te confirmará la plaza en cuanto reciba la transferencia.</p>`;
+      <p>Te confirmamos la plaza en ${escapar(ESCUELA.plazoConfirmacion)} desde que recibamos la transferencia. ¿Pasa más tiempo? Llámanos al <a href="${enlaceTel()}">${escapar(ESCUELA.telefono)}</a>.</p>`;
   }
   html += `<div class="acciones">${botonCalendario(r)}<button class="btn btn-secundario" data-ir="reservas">Ver mis reservas</button></div>`;
   $("#resultado").innerHTML = html;
@@ -519,12 +556,12 @@ function pintarReservas() {
         else if (estado === "espera") cuerpo = r.pendienteEnvio
           ? htmlSinEnviar(r)
           : `<p class="hecho">✓ La escuela tiene tu petición. Te avisará si se libera una plaza.</p>`;
-        else if (estado === "sin-enviar") cuerpo = `${htmlSinEnviar(r)}<details><summary>Datos para la transferencia</summary>${htmlPago(r)}</details>`;
+        else if (estado === "sin-enviar") cuerpo = htmlSinEnviar(r);
         else if (estado === "enviada") cuerpo = `
           ${plazoVencido(r) ? `<p class="alerta">El plazo de pago terminó el ${fechaLimite(r)}. Llama a la escuela para saber si tu plaza sigue reservada: <a href="${enlaceTel()}">${escapar(ESCUELA.telefono)}</a></p>` : ""}
           ${htmlPago(r)}
           <div class="acciones"><button class="btn btn-principal" data-pagada="${ref}">Ya he hecho la transferencia</button>${botonCalendario(r)}</div>`;
-        else cuerpo = `<p class="hecho">✓ Transferencia hecha. La escuela te confirmará la plaza cuando la reciba.</p>
+        else cuerpo = `<p class="hecho">✓ Transferencia hecha. Te confirmamos la plaza en ${escapar(ESCUELA.plazoConfirmacion)} desde que la recibamos.</p>
           <div class="acciones">${botonCalendario(r)}</div>
           <details><summary>Datos de pago</summary>${htmlPago(r)}</details>
           <button class="enlace" data-no-pagada="${ref}">Me he equivocado, aún no he pagado</button>`;
@@ -620,6 +657,7 @@ function iniciar() {
       el.closest(".alerta")?.querySelector(".confirmar-mail")?.removeAttribute("hidden");
     } else if (d.mailEnviado) {
       marcarEnviada(d.mailEnviado);
+      cambiarReserva(d.mailEnviado, { autoconfirmada: true });
       avisar("Anotado ✓");
       refrescar(d.mailEnviado);
     } else if (d.reintentar) {
@@ -661,6 +699,11 @@ function iniciar() {
   const inicial = location.hash.slice(1);
   if (["cursos", "talleres", "reservas", "horario"].includes(inicial)) mostrarSeccion(inicial);
   reintentarPendientes();
+
+  // Guardar la app en el dispositivo para abrirla sin conexión
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 }
 
 iniciar();

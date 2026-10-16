@@ -22,6 +22,16 @@ const ESCUELA = {
     plazoDias: 3,
   },
 
+  // Cuánto tarda la escuela en confirmar la plaza tras recibir la transferencia
+  plazoConfirmacion: "24 horas",
+
+  // Cambios y cancelaciones (se muestra al reservar y junto a los datos de pago)
+  politicaCancelacion: [
+    "El importe de la reserva no se devuelve.",
+    "Puedes cambiar a otra fecha si nos avisas con al menos 48 horas de antelación.",
+    "Si la escuela cancela la actividad, te devolvemos el importe completo.",
+  ],
+
   // Horario de apertura (deja "Cerrado" los días que no abre)
   horario: [
     { dia: "Lunes", horas: "10:00 – 14:00 · 17:00 – 20:00" },
@@ -42,6 +52,8 @@ const ESCUELA = {
 };
 
 // Cursos largos
+//   foto / fotoAlt: foto de la tarjeta (en la carpeta fotos/) y su descripción.
+//            Las de ahora son fotos de ejemplo: cámbialas por las vuestras.
 //   precio:  número en euros (lo que se paga al reservar, por persona)
 //   unidad:  texto que acompaña al precio, p. ej. "/ mes" (opcional)
 //   plazas:  plazas que se pueden reservar ahora (máx. 6 por grupo).
@@ -50,6 +62,8 @@ const ESCUELA = {
 const CURSOS = [
   {
     id: "c1",
+    foto: "fotos/iniciacion.jpg",
+    fotoAlt: "Alumno aserrando una pieza de plata con la segueta en el banco de trabajo",
     nombre: "Iniciación a la joyería",
     tipo: "Curso trimestral",
     descripcion:
@@ -65,6 +79,8 @@ const CURSOS = [
   },
   {
     id: "c2",
+    foto: "fotos/profesional.jpg",
+    fotoAlt: "Manos de joyero ajustando un anillo de plata sobre el astillero",
     nombre: "Joyería profesional",
     tipo: "Curso anual",
     descripcion:
@@ -80,6 +96,8 @@ const CURSOS = [
   },
   {
     id: "c3",
+    foto: "fotos/engaste.jpg",
+    fotoAlt: "Anillo de plata con un zafiro engastado y orla de piedras",
     nombre: "Engaste de piedras",
     tipo: "Curso 10 semanas",
     descripcion:
@@ -93,6 +111,8 @@ const CURSOS = [
   },
   {
     id: "c4",
+    foto: "fotos/cera.jpg",
+    fotoAlt: "Granalla de plata y de oro en las palmas de las manos, lista para fundir",
     nombre: "Cera perdida y fundición",
     tipo: "Curso 8 semanas",
     descripcion:
@@ -114,6 +134,8 @@ const CURSOS = [
 const TALLERES = [
   {
     id: "t1",
+    foto: "fotos/anillo-plata.jpg",
+    fotoAlt: "Anillos de plata hechos a mano, con bolitas, texturas y una piedra azul",
     nombre: "Tu anillo de plata en una mañana",
     descripcion:
       "La mejor forma de empezar. Texturizas, sueldas y pules tu propio anillo, y te lo llevas puesto.",
@@ -126,6 +148,8 @@ const TALLERES = [
   },
   {
     id: "t2",
+    foto: "fotos/boto.jpg",
+    fotoAlt: "Joyero soldando con soplete piezas redondas de plata",
     nombre: "Botó mallorquí: el botón de plata tradicional",
     descripcion: "Taller de dos sábados con todo el material incluido.",
     fecha: "2026-10-31",
@@ -136,6 +160,8 @@ const TALLERES = [
   },
   {
     id: "t3",
+    foto: "fotos/martillado.jpg",
+    fotoAlt: "Dos anillos de plata con textura martillada sobre madera",
     nombre: "Martillado y texturas sobre metal",
     descripcion: "Taller de una mañana con todo el material incluido.",
     fecha: "2026-11-14",
@@ -145,6 +171,8 @@ const TALLERES = [
   },
   {
     id: "t4",
+    foto: "fotos/esmalte.jpg",
+    fotoAlt: "Anillo de metal calentándose bajo la llama del soplete",
     nombre: "Esmalte al fuego",
     descripcion: "Taller de fin de semana con todo el material incluido.",
     fecha: "2026-11-21",
@@ -155,6 +183,8 @@ const TALLERES = [
   },
   {
     id: "t5",
+    foto: "fotos/aros.jpg",
+    fotoAlt: "Pendientes de aro de plata con textura",
     nombre: "Pendientes de aro para regalar",
     descripcion: "Edición Navidad, con todo el material incluido.",
     fecha: "2026-12-12",
@@ -164,6 +194,8 @@ const TALLERES = [
   },
   {
     id: "t6",
+    foto: "fotos/alianzas.jpg",
+    fotoAlt: "Dos alianzas de plata sobre una hoja oscura",
     nombre: "Haz vuestras alianzas",
     descripcion:
       "Un día en pareja para forjar los anillos de boda el uno para el otro, en plata, oro de 18 k o mixtos.",

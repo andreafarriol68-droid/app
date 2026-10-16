@@ -6,9 +6,11 @@ App de la escuela de joyería Obrador Mi Segueta (Palma): cursos, talleres en ca
 
 Todo se edita en **`datos.js`** (no hace falta tocar nada más):
 
-- **ESCUELA**: nombre, dirección, teléfono, email, horario y **datos bancarios (IBAN)**.
-- **CURSOS**: nombre, descripción, nivel, fecha de inicio, horario, precio y plazas.
-- **TALLERES**: nombre, descripción, fecha (`AAAA-MM-DD`), hora, precio y plazas. Aparecen solos en el calendario.
+- **ESCUELA**: nombre, dirección, teléfono, email, horario, **datos bancarios (IBAN)**, plazo de confirmación (`plazoConfirmacion`) y **política de cambios y cancelaciones** (`politicaCancelacion`).
+- **CURSOS**: nombre, descripción, nivel, fecha de inicio, horario, precio, plazas y foto.
+- **TALLERES**: nombre, descripción, fecha (`AAAA-MM-DD`), hora, precio, plazas y foto. Aparecen solos en el calendario.
+
+**Fotos:** están en la carpeta `fotos/`. Las de ahora son **fotos de ejemplo** de Unsplash (uso libre; ver `fotos/CREDITOS.txt`). Cámbialas por fotos de vuestras piezas: guarda la nueva con el mismo nombre, o cambia `foto` y `fotoAlt` (la descripción para quien no ve la imagen) en `datos.js`.
 
 ## Cómo funciona la reserva
 
@@ -50,3 +52,7 @@ Mientras falte algo, al abrir la app **en tu ordenador** verás una franja amari
 
 En GitHub: **Settings → Pages → Branch: `main` → Save**. En un par de minutos estará en
 `https://andreafarriol68-droid.github.io/app/`, y puedes enlazarla desde tu página web.
+
+- **Sin conexión:** una vez abierta, la app queda guardada en el móvil (`sw.js`) y se abre aunque no haya internet. Las reservas se envían cuando vuelve la conexión.
+- **Al compartir el enlace** (WhatsApp, Instagram…) sale una vista previa con la foto de `fotos/iniciacion.jpg`. Si la publicas en otra dirección, cambia `og:url` y `og:image` en `index.html`.
+- **Si añades una foto con un nombre nuevo**, ponla también en la lista de `sw.js` y sube el número de `VERSION`.
