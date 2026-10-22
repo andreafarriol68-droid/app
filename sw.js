@@ -2,7 +2,7 @@
 // Los cambios en datos.js y en las fotos se ven solos. Si añades una foto con
 // un nombre nuevo, ponla en ARCHIVOS y sube el número de VERSION.
 
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE = `misegueta-${VERSION}`;
 
 const ARCHIVOS = [
@@ -14,6 +14,7 @@ const ARCHIVOS = [
   "supa.js",
   "cuenta.html",
   "cuenta.js",
+  "chat.js",
   "privacidad.html",
   "privacidad.js",
   "fuentes/marcellus.woff2",

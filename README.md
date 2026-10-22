@@ -74,6 +74,30 @@ La web se conecta con [Supabase](https://supabase.com) (proyecto `sjzjneckpkwvgx
 
 **Seguridad:** quien decide lo que se puede hacer es la base de datos (reglas RLS de `supabase/esquema.sql`), no la página: aunque alguien copie la clave pública, sin rol de administración no puede leer reservas ajenas ni cambiar nada. El **IBAN no se puede cambiar desde la intranet** a propósito (ver `AUDITORIA-SEGURIDAD.md`, A1). Si se pierde la conexión con Supabase, la web sigue funcionando con lo último descargado o, si no, con `datos.js`.
 
+## Chatbot (asistente de dudas)
+
+Botón **«¿Dudas?»** abajo a la derecha de la web. Responde con IA (Claude, de Anthropic) sobre cursos, talleres, precios, fechas, horario y cómo reservar, usando **los mismos datos que la intranet** (si cambias un precio en la intranet, el chatbot lo sabe en 5 minutos). No da nunca el IBAN, no hace reservas y no pide datos personales. Solo aparece si Supabase está conectado.
+
+La clave de Anthropic **no está en la web**: vive en una función de Supabase (`supabase/functions/chat/index.ts`), que es la que habla con Claude.
+
+### Ponerlo en marcha (una sola vez)
+
+1. Crea una clave en [platform.claude.com](https://platform.claude.com) → *API Keys*, y pon un **límite de gasto mensual** en *Billing → Limits* (p. ej. 10 €), así nunca te llevas sorpresas.
+2. Instala la [herramienta de Supabase](https://supabase.com/docs/guides/cli) y, en esta carpeta:
+
+   ```bash
+   supabase login
+   supabase link --project-ref sjzjneckpkwvgxrtdcgo
+   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   supabase secrets set ORIGENES_PERMITIDOS=https://andreafarriol68-droid.github.io,http://localhost:8137
+   supabase functions deploy chat --no-verify-jwt
+   ```
+
+   `ORIGENES_PERMITIDOS` son las webs que pueden usar el chat (para que otra página no gaste tu saldo); si cambias de dominio, añádelo. `--no-verify-jwt` es porque lo usan visitantes sin cuenta.
+3. Abre la web y pregunta algo. Si falla, mira los errores en Supabase → *Edge Functions → chat → Logs*.
+
+**Coste:** usa Claude Opus 5.5 con razonamiento bajo; cada pregunta cuesta del orden de 1-2 céntimos (mirad el gasto real en la consola de Anthropic las primeras semanas). Si quieres que sea más barato, cambia `MODELO` en `supabase/functions/chat/index.ts` a `claude-haiku-5-5` (unas 40 veces más barato, algo menos fino) y vuelve a desplegar. Hay un freno de 8 mensajes por minuto por persona.
+
 ## Publicarla gratis en internet
 
 En GitHub: **Settings → Pages → Branch: `main` → Save**. En un par de minutos estará en
