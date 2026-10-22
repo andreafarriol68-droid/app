@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://sjzjneckpkwvgxrtdcgo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="robots" content="noindex">
+  <title>Mi cuenta · Obrador Mi Segueta</title>
+  <meta name="theme-color" content="#3B2A1E">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="cabecera cabecera-corta">
+    <div class="contenedor">
+      <p class="sello">Escuela de joyería · Palma</p>
+      <p class="cabecera-titulo"><a href="./">Obrador Mi Segueta</a></p>
+    </div>
+  </header>
+
+  <main class="contenedor cuenta">
+    <p><a href="./">← Volver a la web</a></p>
+
+    <div id="sin-configurar" class="alerta" hidden>
+      <p><strong>Las cuentas aún no están activadas.</strong> Falta poner la clave pública de Supabase en <code>datos.js</code> (<code>SUPABASE.clave</code>).</p>
+    </div>
+
+    <div id="mensaje" class="mensaje" role="status" tabindex="-1" hidden></div>
+
+    <!-- ENTRAR / REGISTRARSE -->
+    <section id="acceso" class="panel" hidden>
+      <div class="pestanas-mini" role="tablist">
+        <button role="tab" data-modo="entrar" aria-selected="true">Entrar</button>
+        <button role="tab" data-modo="registro" aria-selected="false">Crear cuenta</button>
+      </div>
+
+      <form id="form-entrar" class="formulario" novalidate>
+        <h2>Entrar</h2>
+        <label>Email o nombre de usuario
+          <input name="identificador" required autocomplete="username" autocapitalize="none" spellcheck="false">
+        </label>
+        <label>Contraseña
+          <input name="password" type="password" required autocomplete="current-password">
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal ancho">Entrar</button>
+        <button type="button" class="enlace" data-modo="recuperar">He olvidado mi contraseña</button>
+      </form>
+
+      <form id="form-registro" class="formulario" novalidate hidden>
+        <h2>Crear cuenta</h2>
+        <p class="nota">Con una cuenta ves en cualquier dispositivo el estado de tus reservas y no tienes que escribir tus datos cada vez.</p>
+        <label>Nombre de usuario
+          <input name="usuario" required minlength="3" maxlength="30" pattern="[a-z0-9_.]{3,30}" autocomplete="username" autocapitalize="none" spellcheck="false">
+          <span class="ayuda">De 3 a 30 letras minúsculas, números, punto o guion bajo.</span>
+        </label>
+        <label>Nombre y apellidos
+          <input name="nombre" required minlength="3" maxlength="120" autocomplete="name">
+        </label>
+        <label>Email
+          <input name="email" type="email" required autocomplete="email" inputmode="email">
+        </label>
+        <label>Contraseña
+          <input name="password" type="password" required minlength="8" autocomplete="new-password">
+          <span class="ayuda">Mínimo 8 caracteres.</span>
+        </label>
+        <p class="privacidad">Usaremos tus datos solo para gestionar tu cuenta y tus reservas. Se guardan en Supabase, nuestro proveedor de base de datos. Puedes borrar tu cuenta cuando quieras desde esta misma página. <a href="privacidad.html">Política de privacidad</a>.</p>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal ancho">Crear cuenta</button>
+      </form>
+
+      <form id="form-recuperar" class="formulario" novalidate hidden>
+        <h2>Recuperar la contraseña</h2>
+        <p class="nota">Te enviamos un enlace para poner una contraseña nueva.</p>
+        <label>Email de tu cuenta
+          <input name="email" type="email" required autocomplete="email" inputmode="email">
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal ancho">Enviar enlace</button>
+        <button type="button" class="enlace" data-modo="entrar">Volver a Entrar</button>
+      </form>
+    </section>
+
+    <!-- NUEVA CONTRASEÑA (al volver del email de recuperación) -->
+    <section id="nueva-clave" class="panel" hidden>
+      <form id="form-nueva-clave" class="formulario" novalidate>
+        <h2>Pon tu contraseña nueva</h2>
+        <label>Contraseña nueva
+          <input name="password" type="password" required minlength="8" autocomplete="new-password">
+          <span class="ayuda">Mínimo 8 caracteres.</span>
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal ancho">Guardar contraseña</button>
+      </form>
+    </section>
+
+    <!-- MI CUENTA -->
+    <section id="mi-cuenta" hidden>
+      <div class="cuenta-cab">
+        <div>
+          <p class="etiqueta" id="cuenta-usuario"></p>
+          <h2 id="cuenta-saludo">Mi cuenta</h2>
+        </div>
+        <div class="acciones">
+          <a id="ir-intranet" class="btn btn-principal" href="admin.html" hidden>Ir a la intranet</a>
+          <button id="salir" class="btn btn-secundario">Cerrar sesión</button>
+        </div>
+      </div>
+
+      <h3 class="subtitulo">Mis reservas en la escuela</h3>
+      <div id="cuenta-reservas"></div>
+
+      <h3 class="subtitulo">Mis datos</h3>
+      <form id="form-perfil" class="panel formulario" novalidate>
+        <label>Email <input name="email" disabled></label>
+        <label>Nombre y apellidos
+          <input name="nombre" required minlength="3" maxlength="120" autocomplete="name">
+        </label>
+        <label>Teléfono
+          <input name="telefono" type="tel" pattern="[+0-9 ]{9,20}" autocomplete="tel" inputmode="tel">
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal">Guardar cambios</button>
+      </form>
+
+      <h3 class="subtitulo">Cambiar la contraseña</h3>
+      <form id="form-cambiar-clave" class="panel formulario" novalidate>
+        <label>Contraseña nueva
+          <input name="password" type="password" required minlength="8" autocomplete="new-password">
+          <span class="ayuda">Mínimo 8 caracteres.</span>
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-secundario">Cambiar contraseña</button>
+      </form>
+
+      <details class="zona-peligro">
+        <summary>Borrar mi cuenta</summary>
+        <p class="nota">Se borran tu usuario y tus datos de acceso. Las reservas ya hechas se conservan el tiempo que exige la ley, pero sin enlace a tu cuenta.</p>
+        <button id="borrar-cuenta" class="btn btn-peligro">Borrar mi cuenta para siempre</button>
+      </details>
+    </section>
+  </main>
+
+  <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+
+  <script src="datos.js"></script>
+  <script src="supa.js"></script>
+  <script src="cuenta.js"></script>
+</body>
+</html>

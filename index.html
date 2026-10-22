@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Seguridad: solo se cargan archivos de esta web y las reservas solo pueden ir a Formspree -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://formspree.io; base-uri 'none'; form-action 'self'; object-src 'none'">
+  <!-- Seguridad: solo se cargan archivos de esta web y solo se conecta con Formspree y con Supabase -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://formspree.io https://sjzjneckpkwvgxrtdcgo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Obrador Mi Segueta</title>
   <meta name="description" content="Obrador Mi Segueta, escuela de joyería en Palma: cursos, talleres, reservas y horario.">
@@ -33,6 +33,7 @@
 <body>
   <div id="modo-prueba" class="modo-prueba" hidden></div>
   <header class="cabecera">
+    <a id="enlace-cuenta" class="enlace-cuenta" href="cuenta.html" hidden>Entrar</a>
     <div class="contenedor">
       <svg class="logo" width="56" height="56" viewBox="0 0 48 48" aria-hidden="true">
         <path d="M33 13 L26 27 L36 27 Z" fill="var(--gold)" opacity=".28"/>
@@ -168,6 +169,7 @@
   <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
 
   <script src="datos.js"></script>
+  <script src="supa.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

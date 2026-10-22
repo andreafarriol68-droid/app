@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://sjzjneckpkwvgxrtdcgo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Intranet · Obrador Mi Segueta</title>
+  <meta name="theme-color" content="#3B2A1E">
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="intranet">
+  <header class="cabecera cabecera-corta">
+    <div class="contenedor cabecera-intranet">
+      <div>
+        <p class="sello">Intranet</p>
+        <p class="cabecera-titulo"><a href="./">Obrador Mi Segueta</a></p>
+      </div>
+      <div class="cabecera-usuario" id="cabecera-usuario" hidden>
+        <span id="admin-nombre"></span>
+        <a href="./" class="enlace-claro">Ver la web</a>
+        <button id="salir" class="enlace-claro">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="pestanas" aria-label="Secciones de la intranet" id="menu" hidden>
+    <div class="contenedor pestanas-lista" role="tablist">
+      <button role="tab" data-seccion="reservas" aria-selected="true">Reservas <span id="contador-reservas" class="contador" hidden></span></button>
+      <button role="tab" data-seccion="actividades" aria-selected="false">Cursos y talleres</button>
+      <button role="tab" data-seccion="escuela" aria-selected="false">Datos de la escuela</button>
+      <button role="tab" data-seccion="usuarios" aria-selected="false">Usuarios</button>
+    </div>
+  </nav>
+
+  <main class="contenedor">
+    <p id="cargando" class="cargando"><span class="girando" aria-hidden="true"></span> Comprobando tu acceso…</p>
+    <div id="sin-acceso" class="panel" hidden></div>
+
+    <!-- RESERVAS -->
+    <section id="reservas" class="seccion" hidden>
+      <h2>Reservas</h2>
+      <div id="resumen-reservas" class="resumen"></div>
+      <div class="filtros">
+        <label>Mostrar
+          <select id="filtro-estado">
+            <option value="por-atender">Por atender</option>
+            <option value="">Todas</option>
+            <option value="pagada">Pagadas · por confirmar</option>
+            <option value="pendiente">Pendientes de pago</option>
+            <option value="espera">Lista de espera</option>
+            <option value="confirmada">Confirmadas</option>
+            <option value="cancelada">Canceladas</option>
+          </select>
+        </label>
+        <label class="crece">Buscar
+          <input id="filtro-texto" type="search" placeholder="Nombre, email, referencia o actividad">
+        </label>
+        <button id="recargar-reservas" class="btn btn-secundario">Actualizar</button>
+      </div>
+      <div id="lista-reservas"></div>
+    </section>
+
+    <!-- CURSOS Y TALLERES -->
+    <section id="actividades" class="seccion" hidden>
+      <h2>Cursos y talleres</h2>
+      <p class="intro">Lo que cambies aquí se ve en la web al momento (en los móviles, la próxima vez que abran la app con conexión). Pon las plazas a 0 cuando se llene: aparece «Completo» y la lista de espera.</p>
+      <div class="acciones">
+        <button class="btn btn-principal" data-nueva="curso">+ Nuevo curso</button>
+        <button class="btn btn-principal" data-nueva="taller">+ Nuevo taller</button>
+      </div>
+      <h3 class="subtitulo">Cursos</h3>
+      <div id="lista-cursos" class="filas"></div>
+      <h3 class="subtitulo">Talleres</h3>
+      <div id="lista-talleres" class="filas"></div>
+    </section>
+
+    <!-- DATOS DE LA ESCUELA -->
+    <section id="escuela" class="seccion" hidden>
+      <h2>Datos de la escuela</h2>
+      <p class="intro">Textos, contacto y horario que salen en la web.</p>
+      <p class="alerta">Por seguridad, el <strong>IBAN</strong> y los datos del banco <strong>no</strong> se cambian desde aquí: solo en el archivo <code>datos.js</code>. Así, aunque alguien entrara en una cuenta de la intranet, no podría desviar los pagos.</p>
+      <form id="form-escuela" class="panel formulario formulario-ancho" novalidate>
+        <fieldset>
+          <legend>Presentación</legend>
+          <label>Nombre <input name="nombre" required maxlength="80"></label>
+          <label>Subtítulo <input name="subtitulo" maxlength="80"></label>
+          <label class="todo">Lema <input name="lema" maxlength="160"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Contacto</legend>
+          <label class="todo">Dirección <input name="direccion" required maxlength="160"></label>
+          <label class="todo">Cómo llegar <input name="comoLlegar" maxlength="200"></label>
+          <label>Teléfono <input name="telefono" required pattern="[+0-9 ]{9,20}" inputmode="tel"></label>
+          <label>Email <input name="email" type="email" required></label>
+        </fieldset>
+        <fieldset>
+          <legend>Horario de apertura</legend>
+          <div id="campos-horario" class="todo campos-horario"></div>
+          <label class="todo">Nota bajo el horario <input name="notaHorario" maxlength="200"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Reservas</legend>
+          <label>Tiempo para confirmar la plaza <input name="plazoConfirmacion" required maxlength="40" placeholder="24 horas"></label>
+          <label class="todo">Cambios y cancelaciones <span class="ayuda">Una norma por línea.</span>
+            <textarea name="politicaCancelacion" rows="4" maxlength="1200"></textarea>
+          </label>
+        </fieldset>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal">Guardar los datos de la escuela</button>
+      </form>
+    </section>
+
+    <!-- USUARIOS -->
+    <section id="usuarios" class="seccion" hidden>
+      <h2>Usuarios</h2>
+      <p class="intro">Personas con cuenta. Las <strong>administradoras</strong> pueden entrar en esta intranet y cambiarlo todo: dales el rol solo a quien trabaje en la escuela.</p>
+      <div id="lista-usuarios"></div>
+    </section>
+  </main>
+
+  <!-- EDITAR CURSO / TALLER -->
+  <dialog id="dialogo-actividad" class="dialogo dialogo-ancho">
+    <form id="form-actividad" class="paso formulario" novalidate>
+      <button type="button" class="cerrar" aria-label="Cerrar">×</button>
+      <p class="etiqueta" id="actividad-etiqueta">Nuevo curso</p>
+      <h3 id="actividad-titulo">Nuevo curso</h3>
+
+      <label>Nombre <input name="nombre" required maxlength="120"></label>
+      <label>Descripción <textarea name="descripcion" rows="3" maxlength="1000"></textarea></label>
+
+      <div class="dos">
+        <label>Precio (€) <input name="precio" type="number" min="0" step="0.01" required inputmode="decimal"></label>
+        <label>Texto junto al precio <input name="unidad" maxlength="40" placeholder="/ mes, material incluido…"></label>
+        <label>Plazas libres <input name="plazas" type="number" min="0" max="99" step="1" required></label>
+        <label>Aviso corto <input name="estado" maxlength="60" placeholder="Quedan 2 plazas"></label>
+      </div>
+
+      <fieldset data-solo="curso">
+        <legend>Curso</legend>
+        <div class="dos">
+          <label>Tipo <input name="tipo" maxlength="60" placeholder="Curso trimestral"></label>
+          <label>Nivel <input name="nivel" maxlength="60" placeholder="Nivel inicial"></label>
+          <label>Duración <input name="duracion" maxlength="80" placeholder="48 h · 12 semanas"></label>
+          <label>Empieza el <input name="inicio" type="date"></label>
+        </div>
+        <label>Horario <input name="horario" maxlength="120" placeholder="Martes y jueves 18:00 – 21:00"></label>
+      </fieldset>
+
+      <fieldset data-solo="taller">
+        <legend>Taller</legend>
+        <div class="dos">
+          <label>Fecha (vacía = a convenir) <input name="fecha" type="date"></label>
+          <label>Grupo máximo <input name="grupo" type="number" min="1" max="99" placeholder="6"></label>
+        </div>
+        <label>Otros días del mismo taller <input name="otrasFechas" placeholder="AAAA-MM-DD, AAAA-MM-DD" pattern="(\d{4}-\d{2}-\d{2})(\s*,\s*\d{4}-\d{2}-\d{2})*">
+          <span class="ayuda">Solo si dura más de un día. Separa las fechas con comas.</span>
+        </label>
+        <label>Hora <input name="hora" maxlength="120" placeholder="Sábado 10:00 – 14:00"></label>
+        <label>Cómo se llaman las plazas <input name="textoPlazas" maxlength="40" placeholder="Número de plazas"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Foto</legend>
+        <label>Archivo de la carpeta fotos/ <input name="foto" list="fotos-disponibles" placeholder="fotos/iniciacion.jpg" pattern="fotos/[A-Za-z0-9_.\-]+"></label>
+        <datalist id="fotos-disponibles"></datalist>
+        <label>Descripción de la foto (para quien no ve la imagen) <input name="fotoAlt" maxlength="300"></label>
+      </fieldset>
+
+      <div class="dos">
+        <label>Orden en la lista <input name="orden" type="number" step="1"></label>
+        <label class="casilla"><input name="visible" type="checkbox" checked> Publicado en la web</label>
+      </div>
+
+      <p class="error-form" hidden></p>
+      <div class="acciones">
+        <button type="submit" class="btn btn-principal">Guardar</button>
+        <button type="button" class="btn btn-secundario cerrar-dialogo">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+
+  <script src="datos.js"></script>
+  <script src="supa.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

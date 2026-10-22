@@ -2,7 +2,22 @@
 //  DATOS DE LA ESCUELA — edita solo este archivo
 //  Cambia textos, precios, fechas y datos bancarios aquí.
 //  Las fechas van en formato "AAAA-MM-DD".
+//
+//  Si Supabase está conectado (abajo), los cursos, talleres y
+//  textos de la escuela se editan desde la intranet (admin.html)
+//  y lo de este archivo solo se usa como copia de reserva.
+//  Los datos bancarios (IBAN) se cambian SIEMPRE aquí.
 // ============================================================
+
+// Supabase: cuentas de usuario, intranet y reservas guardadas.
+//   url:   la dirección del proyecto
+//   clave: Supabase → Project Settings → API Keys → la clave
+//          "publishable" (o la "anon public"). Es pública: puede ir aquí.
+//          ¡Nunca pongas la "secret" ni la "service_role"!
+const SUPABASE = {
+  url: "https://sjzjneckpkwvgxrtdcgo.supabase.co",
+  clave: "",
+};
 
 const ESCUELA = {
   nombre: "Obrador Mi Segueta",

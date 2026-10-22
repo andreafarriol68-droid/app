@@ -32,7 +32,8 @@ function avisar(texto) {
   avisar.t = setTimeout(() => a.classList.remove("visible"), 2600);
 }
 
-const envioAutomatico = () => !!ESCUELA.formularioURL;
+// Envío automático: a la intranet (Supabase) y/o por email (Formspree)
+const envioAutomatico = () => Supa.activo || !!ESCUELA.formularioURL;
 
 // ---------- Mis reservas (guardadas en este dispositivo) ----------
 function leerReservas() {
@@ -79,6 +80,7 @@ function cambiarReserva(referencia, cambios) {
 const reservaPorRef = (ref) => leerReservas().find((r) => r.referencia === ref);
 
 // Estados:  sin-enviar → enviada (la escuela la tiene) → pagada (transferencia hecha)
+//           → confirmada (la escuela la confirma en la intranet) · cancelada
 //           espera (lista de espera, sin pago)
 const estadoDe = (r) => r.estado || (r.enviada ? "enviada" : "sin-enviar");
 const ESTADOS = {
@@ -86,6 +88,8 @@ const ESTADOS = {
   enviada: "Pendiente de pago",
   pagada: "Pagada · pendiente de confirmar",
   espera: "En lista de espera",
+  confirmada: "Plaza confirmada",
+  cancelada: "Cancelada",
 };
 // Una petición de lista de espera "llegó" si se envió sola o el alumno confirmó que mandó el email
 const esperaSinEnviar = (r) => estadoDe(r) === "espera" && r.pendienteEnvio;
@@ -104,6 +108,13 @@ function leerAlumno() {
 }
 function guardarAlumno(a) {
   try { localStorage.setItem("alumno", JSON.stringify(a)); } catch {}
+}
+
+// Con la sesión iniciada, el formulario de reserva ya trae el nombre y el email de la cuenta
+function datosDeCuenta() {
+  const u = Supa.activo && Supa.auth.sesion()?.user;
+  if (!u) return {};
+  return { ...(u.user_metadata?.nombre ? { nombre: u.user_metadata.nombre } : {}), ...(u.email ? { email: u.email } : {}) };
 }
 
 // ---------- Pestañas ----------
@@ -140,9 +151,9 @@ function pintarCursos() {
       <p class="desc">${escapar(c.descripcion)}</p>
       <ul class="datos">
         ${c.inicio ? `<li>${icono("calendario")}Empieza el ${fechaLarga(c.inicio)}</li>` : ""}
-        <li>${icono("reloj")}${escapar(c.horario)}</li>
-        <li>${icono("duracion")}${escapar(c.duracion)}</li>
-        <li>${icono("anillo")}${escapar(c.nivel)}</li>
+        ${c.horario ? `<li>${icono("reloj")}${escapar(c.horario)}</li>` : ""}
+        ${c.duracion ? `<li>${icono("duracion")}${escapar(c.duracion)}</li>` : ""}
+        ${c.nivel ? `<li>${icono("anillo")}${escapar(c.nivel)}</li>` : ""}
       </ul>
       ${estadoHtml(c)}
       <div class="precio-fila">
@@ -153,14 +164,18 @@ function pintarCursos() {
 }
 // ---------- Talleres y calendario ----------
 const diasDe = (t) => (t.fecha ? [t.fecha, ...(t.otrasFechas || [])] : []);
-const conFecha = TALLERES.filter((t) => t.fecha);
-const primerTaller = conFecha.map((t) => aFecha(t.fecha)).filter((f) => f >= hoy()).sort((a, b) => a - b)[0];
-let mesVisible = new Date((primerTaller || hoy()).getFullYear(), (primerTaller || hoy()).getMonth(), 1);
+const conFecha = () => TALLERES.filter((t) => t.fecha);
+// El calendario se abre en el mes del próximo taller
+function mesInicial() {
+  const primero = conFecha().map((t) => aFecha(t.fecha)).filter((f) => f >= hoy()).sort((a, b) => a - b)[0] || hoy();
+  return new Date(primero.getFullYear(), primero.getMonth(), 1);
+}
+let mesVisible = mesInicial();
 let diaSeleccionado = null;
 
 function talleresDelMes(fecha) {
   const prefijo = claveDia(fecha).slice(0, 7); // "AAAA-MM"
-  return conFecha
+  return conFecha()
     .filter((t) => diasDe(t).some((d) => d.startsWith(prefijo)))
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
 }
@@ -212,7 +227,7 @@ function tarjetaTaller(t) {
       <h3>${escapar(t.nombre)}</h3>
       <p class="desc">${escapar(t.descripcion)}</p>
       <ul class="datos">
-        <li>${icono("reloj")}${escapar(t.hora)}</li>
+        ${t.hora ? `<li>${icono("reloj")}${escapar(t.hora)}</li>` : ""}
         ${t.fecha ? `<li>${icono("grupo")}Grupo de máximo ${t.grupo || 6} personas</li>` : ""}
       </ul>
       ${pasado ? "" : estadoHtml(t)}
@@ -306,7 +321,7 @@ function abrirReserva(id) {
   if (previa) dup.innerHTML = `Ya tienes una reserva de esto (<strong>${escapar(ESTADOS[estadoDe(previa)])}</strong>).
     <button type="button" class="enlace" data-ir="reservas">Verla</button> · o sigue si quieres hacer otra.`;
 
-  const alumno = leerAlumno();
+  const alumno = { ...datosDeCuenta(), ...leerAlumno() };
   ["nombre", "email", "telefono"].forEach((k) => (form.elements[k].value = alumno[k] || ""));
   actualizarTotal();
   $("#dialogo").showModal();
@@ -394,11 +409,37 @@ const asunto = (r) => `${estadoDe(r) === "espera" ? "Lista de espera" : "Reserva
 const enlaceEmail = (r) => `mailto:${ESCUELA.email}?subject=${encodeURIComponent(asunto(r))}&body=${encodeURIComponent(textoReserva(r))}`;
 const enlaceTel = () => "tel:" + ESCUELA.telefono.replace(/\s/g, "");
 
-// Envío automático a la escuela (Formspree). Devuelve true si llegó.
+// Envío automático a la escuela: a la intranet (Supabase) y por email (Formspree).
+// Devuelve true si llegó por alguna de las dos vías.
 const enviando = new Set();
 async function enviarAEscuela(r) {
   if (!envioAutomatico() || !navigator.onLine || enviando.has(r.referencia)) return false;
   enviando.add(r.referencia);
+  try {
+    const [intranet, email] = await Promise.all([guardarEnIntranet(r), enviarAFormspree(r)]);
+    return intranet || email;
+  } finally {
+    enviando.delete(r.referencia);
+  }
+}
+
+async function guardarEnIntranet(r) {
+  if (!Supa.activo) return false;
+  const resp = await Supa.rest("reservas", {
+    metodo: "POST",
+    cabeceras: { Prefer: "return=minimal" },
+    cuerpo: {
+      referencia: r.referencia, actividad_id: r.id, tipo: r.tipo, actividad: r.actividad, cuando: r.cuando,
+      fecha_actividad: r.fechaActividad, plazas: r.plazas, total: r.total, unidad: r.unidad,
+      nombre: r.nombre, email: r.email, telefono: r.telefono,
+      estado: estadoDe(r) === "espera" ? "espera" : "pendiente",
+    },
+  });
+  return resp.ok || resp.status === 409; // 409 = ya estaba guardada (reintento)
+}
+
+async function enviarAFormspree(r) {
+  if (!ESCUELA.formularioURL) return false;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 12000);
   try {
@@ -414,8 +455,34 @@ async function enviarAEscuela(r) {
     return false;
   } finally {
     clearTimeout(t);
-    enviando.delete(r.referencia);
   }
+}
+
+// Lo que la escuela hace en la intranet (anotar el pago, confirmar, cancelar) se ve en Mis reservas
+async function sincronizarEstados() {
+  if (!Supa.activo || !navigator.onLine) return;
+  const porEmail = {};
+  leerReservas()
+    .filter((r) => !actividadPasada(r) && !r.pendienteEnvio && ["enviada", "pagada", "confirmada", "espera"].includes(estadoDe(r)))
+    .forEach((r) => (porEmail[r.email.toLowerCase()] ||= []).push(r.referencia));
+  const DE_LA_ESCUELA = { pagada: "pagada", confirmada: "confirmada", cancelada: "cancelada" };
+  let cambios = 0;
+  for (const [email, refs] of Object.entries(porEmail)) {
+    const resp = await Supa.rpc("estado_de_reservas", { p_refs: refs, p_email: email }, false);
+    if (!resp.ok || !Array.isArray(resp.datos)) continue;
+    resp.datos.forEach(({ referencia, estado }) => {
+      const r = reservaPorRef(referencia);
+      const nuevo = DE_LA_ESCUELA[estado];
+      if (r && nuevo && estadoDe(r) !== nuevo) { cambiarReserva(referencia, { estado: nuevo }); cambios++; }
+    });
+  }
+  if (cambios && !$("#reservas").hidden) pintarReservas();
+}
+
+// "Ya he hecho la transferencia" también llega a la intranet (si falla, no pasa nada)
+function avisarPago(ref, pagada) {
+  const r = reservaPorRef(ref);
+  if (Supa.activo && r) Supa.rpc("avisar_pago", { p_ref: ref, p_email: r.email, p_pagada: pagada }, false);
 }
 
 function marcarEnviada(ref) {
@@ -462,15 +529,15 @@ function htmlSinEnviar(r) {
 // Línea de progreso: Enviada → Transferencia → Confirmada
 function htmlProgreso(r) {
   const e = estadoDe(r);
-  if (e === "espera") return "";
-  const nivel = { "sin-enviar": 0, enviada: 1, pagada: 2 }[e];
+  if (e === "espera" || e === "cancelada") return "";
+  const nivel = { "sin-enviar": 0, enviada: 1, pagada: 2, confirmada: 3 }[e];
   return `<ol class="progreso" aria-label="Progreso de la reserva">${[nivel ? "Reserva enviada" : "Enviar reserva", "Transferencia", "Plaza confirmada"]
     .map((p, i) => `<li class="${i < nivel ? "hecho-paso" : i === nivel ? "actual" : ""}"${i === nivel ? ' aria-current="step"' : ""}>${p}</li>`)
     .join("")}</ol>`;
 }
 
 // Solo cuando la escuela ya tiene la reserva (no en lista de espera ni sin enviar)
-const botonCalendario = (r) => r.fechaActividad && !actividadPasada(r) && ["enviada", "pagada"].includes(estadoDe(r))
+const botonCalendario = (r) => r.fechaActividad && !actividadPasada(r) && ["enviada", "pagada", "confirmada"].includes(estadoDe(r))
   ? `<button class="btn btn-secundario" data-ics="${escapar(r.referencia)}">${icono("calendario")}Añadir a mi calendario</button>` : "";
 
 // Contenido de la ventana tras enviar el formulario
@@ -602,6 +669,9 @@ function pintarReservas() {
           ? htmlSinEnviar(r)
           : `<p class="hecho">✓ La escuela tiene tu petición. Te avisará si se libera una plaza.</p>`;
         else if (estado === "sin-enviar") cuerpo = htmlSinEnviar(r);
+        else if (estado === "confirmada") cuerpo = `<p class="hecho">✓ La escuela ha confirmado tu plaza. ¡Te esperamos!</p>
+          <div class="acciones">${botonCalendario(r)}</div>`;
+        else if (estado === "cancelada") cuerpo = `<p class="alerta">La escuela ha cancelado esta reserva. Si tienes dudas, llámanos al <a href="${enlaceTel()}">${escapar(ESCUELA.telefono)}</a>.</p>`;
         else if (estado === "enviada") cuerpo = `
           ${plazoVencido(r) ? `<p class="alerta">El plazo de pago terminó el ${fechaLimite(r)}. Llama a la escuela para saber si tu plaza sigue reservada: <a href="${enlaceTel()}">${escapar(ESCUELA.telefono)}</a></p>` : ""}
           ${htmlPago(r)}
@@ -675,7 +745,8 @@ function avisoModoPrueba() {
   if (!ibanValido(ESCUELA.banco.iban)) falta.push("un IBAN válido (ES + 22 números; el actual no lo es)");
   if (/000 000/.test(ESCUELA.telefono)) falta.push("el teléfono");
   if (/Nombre del banco/.test(ESCUELA.banco.banco)) falta.push("el banco");
-  if (!ESCUELA.formularioURL) falta.push("la dirección de Formspree (formularioURL)");
+  if (SUPABASE.url && !Supa.activo) falta.push("la clave pública de Supabase (SUPABASE.clave)");
+  if (!envioAutomatico()) falta.push("la conexión con Supabase o la dirección de Formspree (formularioURL)");
   if (!ESCUELA.nif) falta.push("el titular y el NIF para la página de privacidad (titularLegal, nif)");
   if (!falta.length) return;
   console.warn("datos.js: falta " + falta.join(", "));
@@ -687,8 +758,44 @@ function avisoModoPrueba() {
   }
 }
 
+// ---------- Contenido editado en la intranet (Supabase) ----------
+// Se enseña al momento lo último descargado (o datos.js) y se actualiza por detrás
+function aplicarContenido(bruto) {
+  const c = Supa.interpretar(bruto);
+  if (!c) return false;
+  Object.assign(ESCUELA, c.escuela);
+  CURSOS.splice(0, CURSOS.length, ...c.cursos);
+  TALLERES.splice(0, TALLERES.length, ...c.talleres);
+  return true;
+}
+function contenidoGuardado() {
+  try { return JSON.parse(localStorage.getItem("contenido")); } catch { return null; }
+}
+async function actualizarContenido() {
+  if (!Supa.activo || !navigator.onLine) return;
+  const bruto = await Supa.descargarContenido();
+  if (!bruto) return;
+  const nuevo = JSON.stringify(bruto);
+  let anterior = null;
+  try { anterior = localStorage.getItem("contenido"); localStorage.setItem("contenido", nuevo); } catch {}
+  if (nuevo !== anterior && aplicarContenido(bruto)) {
+    mesVisible = mesInicial();
+    pintarContenido();
+  }
+}
+
+// Enlace de la cabecera: "Entrar", "Mi cuenta" o "Intranet"
+function pintarEnlaceCuenta() {
+  if (!Supa.activo) return;
+  const s = Supa.auth.sesion();
+  const a = $("#enlace-cuenta");
+  a.hidden = false;
+  a.textContent = !s ? "Entrar" : s.rol === "admin" ? "Intranet" : "Mi cuenta";
+  a.href = s?.rol === "admin" ? "admin.html" : "cuenta.html";
+}
+
 // ---------- Inicio ----------
-function iniciar() {
+function pintarContenido() {
   document.title = ESCUELA.nombre;
   $("#nombre-escuela").textContent = ESCUELA.nombre;
   $("#subtitulo").textContent = ESCUELA.subtitulo || "";
@@ -700,13 +807,19 @@ function iniciar() {
   $("#telefono").href = enlaceTel();
   $("#email").textContent = ESCUELA.email;
   $("#email").href = "mailto:" + ESCUELA.email;
-
-  limpiarAntiguas();
   pintarCursos();
   pintarCalendario();
   pintarTalleresConvenir();
   pintarHorario();
+  if (!$("#reservas").hidden) pintarReservas();
+}
+
+function iniciar() {
+  if (Supa.activo && aplicarContenido(contenidoGuardado())) mesVisible = mesInicial();
+  limpiarAntiguas();
+  pintarContenido();
   pintarContador();
+  pintarEnlaceCuenta();
   avisoModoPrueba();
 
   document.querySelectorAll(".pestanas button").forEach((b) => b.addEventListener("click", () => mostrarSeccion(b.dataset.seccion)));
@@ -717,7 +830,7 @@ function iniciar() {
   $("#form-reserva").addEventListener("input", (e) => e.target.name === "nombre" && e.target.setCustomValidity(""));
   // Cerrar pulsando fuera de la ventana
   $("#dialogo").addEventListener("click", (e) => { if (e.target === $("#dialogo")) $("#dialogo").close(); });
-  window.addEventListener("online", reintentarPendientes);
+  window.addEventListener("online", () => { reintentarPendientes().then(sincronizarEstados); actualizarContenido(); });
 
   document.addEventListener("click", async (e) => {
     const el = e.target.closest("[data-reservar],[data-dia],[data-copiar],[data-borrar],[data-mailto],[data-mail-enviado],[data-reintentar],[data-pagada],[data-no-pagada],[data-ics],[data-ir],[data-olvidar],.cerrar");
@@ -742,10 +855,12 @@ function iniciar() {
       refrescar(d.reintentar);
     } else if (d.pagada) {
       cambiarReserva(d.pagada, { estado: "pagada", pagadaEl: new Date().toISOString() });
+      avisarPago(d.pagada, true);
       avisar("¡Gracias! Anotado como pagada");
       refrescar(d.pagada);
     } else if (d.noPagada) {
       cambiarReserva(d.noPagada, { estado: "enviada" });
+      avisarPago(d.noPagada, false);
       refrescar(d.noPagada);
     } else if (d.ics) {
       const r = reservaPorRef(d.ics);
@@ -771,7 +886,8 @@ function iniciar() {
 
   const inicial = location.hash.slice(1);
   if (["cursos", "talleres", "reservas", "horario"].includes(inicial)) mostrarSeccion(inicial);
-  reintentarPendientes();
+  reintentarPendientes().then(sincronizarEstados);
+  actualizarContenido();
 
   // Guardar la app en el dispositivo para abrirla sin conexión
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
