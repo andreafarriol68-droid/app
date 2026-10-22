@@ -1,6 +1,10 @@
 // Conexión con Supabase: cuentas de usuario, intranet, reservas y contenido de la web.
 // Sin librerías: habla directamente con la API de Supabase (así la web sigue cargando
 // solo archivos propios). La dirección y la clave pública están en datos.js (SUPABASE).
+//
+// Este mismo archivo lo usan la web y la intranet (intranet/supa.js es una copia exacta:
+// si cambias uno, copia el otro). Cada app tiene su propia sesión (SUPABASE.claveSesion)
+// y su propia página de vuelta para los enlaces de los emails (SUPABASE.paginaCuenta).
 
 const Supa = (() => {
   const cfg = typeof SUPABASE === "object" && SUPABASE ? SUPABASE : {};
@@ -11,7 +15,7 @@ const Supa = (() => {
   const claveJwt = clave.startsWith("eyJ");
 
   // ---------- Sesión (guardada en este dispositivo) ----------
-  const CLAVE_SESION = "sesion";
+  const CLAVE_SESION = cfg.claveSesion || "sesion";
   let sesion = leerSesion();
   function leerSesion() {
     try {
@@ -103,7 +107,7 @@ const Supa = (() => {
   const rpc = (nombre, args = {}, conSesion = true) => llamar(`/rest/v1/rpc/${nombre}`, { metodo: "POST", cuerpo: args, conSesion });
 
   // Adónde vuelve el usuario al pulsar el enlace del email (confirmar cuenta, nueva contraseña)
-  const paginaCuenta = () => new URL("cuenta.html", location.href).href;
+  const paginaCuenta = () => new URL(cfg.paginaCuenta || "cuenta.html", location.href).href;
 
   // ---------- Cuentas ----------
   const auth = {

@@ -784,14 +784,12 @@ async function actualizarContenido() {
   }
 }
 
-// Enlace de la cabecera: "Entrar", "Mi cuenta" o "Intranet"
+// Enlace de la cabecera: "Entrar" o "Mi cuenta" (la intranet es una app aparte y no se enlaza desde aquí)
 function pintarEnlaceCuenta() {
   if (!Supa.activo) return;
-  const s = Supa.auth.sesion();
   const a = $("#enlace-cuenta");
   a.hidden = false;
-  a.textContent = !s ? "Entrar" : s.rol === "admin" ? "Intranet" : "Mi cuenta";
-  a.href = s?.rol === "admin" ? "admin.html" : "cuenta.html";
+  a.textContent = Supa.auth.sesion() ? "Mi cuenta" : "Entrar";
 }
 
 // ---------- Inicio ----------

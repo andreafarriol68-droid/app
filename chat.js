@@ -1,9 +1,11 @@
 // Chatbot de la web: un botón flotante abre una ventana para preguntar dudas.
-// Las respuestas las da Claude a través de la función "chat" de Supabase
-// (supabase/functions/chat), que es la única que conoce la clave de Anthropic.
+// Con Supabase, las respuestas las da Claude a través de la función "chat" de
+// Supabase (supabase/functions/chat), que es la única que conoce la clave de Anthropic.
+// Sin Supabase, sin conexión o si Claude falla, responde el asistente sencillo
+// de asistente.js, que solo usa los datos de la web y no envía nada.
 
 (() => {
-  if (!Supa.activo) return; // sin Supabase no hay chatbot
+  const conIA = Supa.activo;
   const URL_CHAT = SUPABASE.url.replace(/\/+$/, "") + "/functions/v1/chat";
   const MAX_MENSAJES = 20;
   const SUGERENCIAS = ["¿Qué curso me recomiendas para empezar?", "¿Qué talleres hay este mes?", "¿Cómo reservo una plaza?", "¿Dónde estáis y qué horario tenéis?"];
@@ -36,7 +38,9 @@
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </form>
-      <p class="chat-aviso">Respuestas automáticas con IA (Claude, de Anthropic): pueden equivocarse. No escribas datos personales. <a href="privacidad.html">Privacidad</a></p>
+      <p class="chat-aviso">${conIA
+        ? "Respuestas automáticas con IA (Claude, de Anthropic): pueden equivocarse. No escribas datos personales."
+        : "Respuestas automáticas con la información de esta web. Lo que escribes no sale de tu dispositivo."} <a href="privacidad.html">Privacidad</a></p>
     </section>`);
 
   const $c = (sel) => document.querySelector(sel);
@@ -63,11 +67,26 @@
     return `<div class="chat-msg chat-${m.rol === "user" ? "yo" : "bot"}">${m.rol === "user" ? `<p>${escapar(m.texto)}</p>` : formatear(m.texto)}</div>`;
   }
 
+  const botones = (lista) => `<div class="chat-sugerencias">${lista.map((s) => `<button type="button" data-pregunta="${escapar(s)}">${escapar(s)}</button>`).join("")}</div>`;
+
   function pintar() {
+    // Botones de respuesta rápida: los de inicio, o los que dejó el asistente sencillo en su última respuesta
+    const ultimo = mensajes[mensajes.length - 1];
+    const rapidas = !mensajes.length ? SUGERENCIAS
+      : ultimo.rol === "assistant" && Array.isArray(ultimo.sugerencias) ? ultimo.sugerencias.filter((s) => typeof s === "string").slice(0, 4) : [];
     lista.innerHTML = `<div class="chat-msg chat-bot"><p>¡Hola! Soy el asistente de ${escapar(ESCUELA.nombre)}. Pregúntame por los cursos, talleres, precios, fechas o cómo reservar.</p></div>`
       + mensajes.map(burbuja).join("")
-      + (mensajes.length ? "" : `<div class="chat-sugerencias">${SUGERENCIAS.map((s) => `<button type="button" data-pregunta="${escapar(s)}">${escapar(s)}</button>`).join("")}</div>`);
+      + (rapidas.length ? botones(rapidas) : "");
     lista.scrollTop = lista.scrollHeight;
+  }
+
+  // Respuesta del asistente sencillo (asistente.js), con una pequeña pausa para que se lea como una conversación
+  async function responderLocal(pregunta, caja) {
+    const { texto: respuesta, sugerencias } = Asistente.responder(pregunta);
+    await new Promise((r) => setTimeout(r, 450));
+    caja.classList.remove("chat-escribiendo");
+    mensajes.push({ rol: "assistant", texto: respuesta, sugerencias });
+    pintar();
   }
 
   function abrir() {
@@ -87,18 +106,23 @@
   async function preguntar(pregunta) {
     pregunta = pregunta.trim().slice(0, 1000);
     if (!pregunta || ocupado) return;
-    if (!navigator.onLine) { avisar("Sin conexión: el asistente necesita internet."); return; }
     ocupado = true;
     texto.value = "";
     ajustarAlto();
     mensajes.push({ rol: "user", texto: pregunta });
     // Solo se manda lo último, empezando siempre por una pregunta
-    let enviar = mensajes.slice(-(MAX_MENSAJES - 1));
+    let enviar = mensajes.slice(-(MAX_MENSAJES - 1)).map(({ rol, texto }) => ({ rol, texto }));
     while (enviar.length && enviar[0].rol !== "user") enviar = enviar.slice(1);
     pintar();
     lista.insertAdjacentHTML("beforeend", `<div class="chat-msg chat-bot chat-escribiendo" id="chat-respuesta"><span></span><span></span><span></span></div>`);
     lista.scrollTop = lista.scrollHeight;
     const caja = $c("#chat-respuesta");
+
+    // Sin Supabase o sin conexión: responde el asistente sencillo
+    if (!conIA || !navigator.onLine) {
+      try { await responderLocal(pregunta, caja); } finally { ocupado = false; guardar(); texto.focus(); }
+      return;
+    }
 
     let respuesta = "";
     try {
@@ -125,14 +149,11 @@
       }
       if (!respuesta.trim()) throw new Error("Respuesta vacía");
       mensajes.push({ rol: "assistant", texto: respuesta });
-    } catch (e) {
-      const motivo = /minuto/.test(e.message) ? e.message : "Ahora mismo no puedo responder.";
-      respuesta = `${motivo} Si es urgente, llama al ${ESCUELA.telefono}.`;
-      mensajes.pop(); // la pregunta no obtuvo respuesta: se puede volver a enviar
-      caja.classList.remove("chat-escribiendo");
-      caja.classList.add("chat-error");
-      caja.innerHTML = `<p>${escapar(respuesta)}</p>`;
-      texto.value = pregunta;
+    } catch {
+      // Claude no está disponible (o se ha llegado al límite por minuto): responde el asistente sencillo
+      caja.innerHTML = "<span></span><span></span><span></span>";
+      caja.classList.add("chat-escribiendo");
+      await responderLocal(pregunta, caja);
     } finally {
       ocupado = false;
       guardar();

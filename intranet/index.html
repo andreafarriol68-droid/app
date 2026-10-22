@@ -3,24 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://sjzjneckpkwvgxrtdcgo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
+  <!-- Intranet de la escuela: app aparte de la web pública, solo para administración.
+       Las fotos de los cursos se ven desde la web pública (img-src). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://andreafarriol68-droid.github.io http://localhost:8137; font-src 'self'; connect-src 'self' https://sjzjneckpkwvgxrtdcgo.supabase.co; base-uri 'none'; form-action 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
   <title>Intranet · Obrador Mi Segueta</title>
   <meta name="theme-color" content="#3B2A1E">
   <link rel="icon" href="icono.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="preload" href="fuentes/nunito-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="intranet.css">
 </head>
 <body class="intranet">
   <header class="cabecera cabecera-corta">
     <div class="contenedor cabecera-intranet">
       <div>
         <p class="sello">Intranet</p>
-        <p class="cabecera-titulo"><a href="./">Obrador Mi Segueta</a></p>
+        <p class="cabecera-titulo">Obrador Mi Segueta</p>
       </div>
       <div class="cabecera-usuario" id="cabecera-usuario" hidden>
         <span id="admin-nombre"></span>
-        <a href="./" class="enlace-claro">Ver la web</a>
+        <a id="ver-web" href="#" class="enlace-claro" target="_blank" rel="noopener">Ver la web</a>
         <button id="salir" class="enlace-claro">Salir</button>
       </div>
     </div>
@@ -38,6 +41,46 @@
   <main class="contenedor">
     <p id="cargando" class="cargando"><span class="girando" aria-hidden="true"></span> Comprobando tu acceso…</p>
     <div id="sin-acceso" class="panel" hidden></div>
+
+    <!-- ACCESO: entrar, recuperar contraseña, poner una nueva -->
+    <section id="acceso" class="panel" hidden>
+      <div id="mensaje" class="mensaje" role="status" tabindex="-1" hidden></div>
+
+      <form id="form-entrar" class="formulario" novalidate>
+        <h2>Entrar en la intranet</h2>
+        <p class="nota">Solo para el equipo de la escuela.</p>
+        <label>Email o nombre de usuario
+          <input name="identificador" required autocomplete="username" autocapitalize="none" spellcheck="false">
+        </label>
+        <label>Contraseña
+          <input name="password" type="password" required autocomplete="current-password">
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal">Entrar</button>
+        <button type="button" class="enlace" data-modo="recuperar">He olvidado mi contraseña</button>
+      </form>
+
+      <form id="form-recuperar" class="formulario" novalidate hidden>
+        <h2>Recuperar la contraseña</h2>
+        <p class="nota">Te enviamos un enlace para poner una contraseña nueva.</p>
+        <label>Email de tu cuenta
+          <input name="email" type="email" required autocomplete="email" inputmode="email">
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal">Enviar enlace</button>
+        <button type="button" class="enlace" data-modo="entrar">Volver</button>
+      </form>
+
+      <form id="form-nueva-clave" class="formulario" novalidate hidden>
+        <h2>Pon tu contraseña nueva</h2>
+        <label>Contraseña nueva
+          <input name="password" type="password" required minlength="8" autocomplete="new-password">
+          <span class="ayuda">Mínimo 8 caracteres.</span>
+        </label>
+        <p class="error-form" hidden></p>
+        <button type="submit" class="btn btn-principal">Guardar y entrar</button>
+      </form>
+    </section>
 
     <!-- RESERVAS -->
     <section id="reservas" class="seccion" hidden>
@@ -81,7 +124,7 @@
     <section id="escuela" class="seccion" hidden>
       <h2>Datos de la escuela</h2>
       <p class="intro">Textos, contacto y horario que salen en la web.</p>
-      <p class="alerta">Por seguridad, el <strong>IBAN</strong> y los datos del banco <strong>no</strong> se cambian desde aquí: solo en el archivo <code>datos.js</code>. Así, aunque alguien entrara en una cuenta de la intranet, no podría desviar los pagos.</p>
+      <p class="alerta">Por seguridad, el <strong>IBAN</strong> y los datos del banco <strong>no</strong> se cambian desde aquí: solo en el archivo <code>datos.js</code> de la web pública. Así, aunque alguien entrara en una cuenta de la intranet, no podría desviar los pagos.</p>
       <form id="form-escuela" class="panel formulario formulario-ancho" novalidate>
         <fieldset>
           <legend>Presentación</legend>
@@ -184,8 +227,8 @@
 
   <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
 
-  <script src="datos.js"></script>
+  <script src="config.js"></script>
   <script src="supa.js"></script>
-  <script src="admin.js"></script>
+  <script src="intranet.js"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 // Intranet de la escuela: reservas, cursos y talleres, datos de la escuela y usuarios.
+// Es una app aparte de la web pública (carpeta intranet/), con su propio inicio de sesión.
 // Ojo: lo que se oculta aquí es solo para que la página sea cómoda. La seguridad de verdad
 // está en la base de datos (reglas RLS de supabase/esquema.sql): sin rol "admin", Supabase
 // no deja leer ni cambiar nada aunque alguien manipule esta página.
@@ -33,7 +34,7 @@ function avisar(texto) {
 
 // Si la sesión ha caducado, a volver a entrar
 function comprobar(r) {
-  if (r.status === 401) { location.replace("cuenta.html?volver=admin"); return false; }
+  if (r.status === 401) { salir("Tu sesión ha caducado. Vuelve a entrar.", "alerta"); return false; }
   if (!r.ok) avisar(r.error);
   return r.ok;
 }
@@ -175,7 +176,7 @@ function filaActividad(a) {
   const yaPaso = a.clase === "taller" && a.fecha && [a.fecha, ...a.otrasFechas].sort().at(-1) < hoyClave();
   return `
     <div class="fila ${a.visible ? "" : "oculta"}">
-      ${a.foto ? `<img src="${escapar(a.foto)}" alt="" width="64" height="48" loading="lazy">` : `<span class="sin-foto"></span>`}
+      ${a.foto ? `<img src="${escapar(new URL(a.foto, WEB_PUBLICA).href)}" alt="" width="64" height="48" loading="lazy">` : `<span class="sin-foto"></span>`}
       <div class="fila-info">
         <strong>${escapar(a.nombre)}</strong>
         <span class="detalle">${escapar(cuando || "")} · ${euros(a.precio)}${a.unidad ? " " + escapar(a.unidad) : ""} · ${a.plazas ? `${a.plazas} plaza${a.plazas > 1 ? "s" : ""} libre${a.plazas > 1 ? "s" : ""}` : "<strong>Completo</strong>"}</span>
@@ -281,6 +282,8 @@ async function cargarEscuela() {
   if (!comprobar(r)) return;
   // Lo guardado en la base de datos manda; lo que falte sale de datos.js
   const e = { ...ESCUELA, ...Supa.limpiarEscuela(r.datos[0]?.datos) };
+  // Los emails a los alumnos usan el nombre, teléfono y dirección al día (el IBAN sigue saliendo de config.js)
+  ["nombre", "telefono", "direccion"].forEach((k) => (ESCUELA[k] = e[k] || ESCUELA[k]));
   const f = $("#form-escuela");
   CAMPOS_TEXTO.forEach((k) => (f.elements[k].value = e[k] || ""));
   f.elements.politicaCancelacion.value = (e.politicaCancelacion || []).join("\n");
@@ -367,32 +370,139 @@ function sinAcceso(html) {
   s.innerHTML = html;
 }
 
-async function iniciar() {
-  if (!Supa.activo) {
-    return sinAcceso(`<h2>Falta conectar Supabase</h2><p>Pon la clave pública en <code>datos.js</code> (<code>SUPABASE.clave</code>) y ejecuta <code>supabase/esquema.sql</code> en el SQL Editor de Supabase. Los pasos están en el README.</p>`);
-  }
-  const s = Supa.auth.sesion();
-  if (!s) return location.replace("cuenta.html?volver=admin");
+// ---------- Acceso (la intranet tiene su propio inicio de sesión) ----------
+function mensaje(texto, tipo = "ok") {
+  const m = $("#mensaje");
+  m.hidden = !texto;
+  m.className = `mensaje mensaje-${tipo}`;
+  m.textContent = texto || "";
+}
 
+function mostrarAcceso(modo = "entrar", aviso = "", tipo = "alerta") {
+  $("#cargando").hidden = true;
+  $("#sin-acceso").hidden = true;
+  $("#menu").hidden = true;
+  $("#cabecera-usuario").hidden = true;
+  document.querySelectorAll(".seccion").forEach((s) => (s.hidden = true));
+  $("#acceso").hidden = false;
+  const formularios = { entrar: "#form-entrar", recuperar: "#form-recuperar", nueva: "#form-nueva-clave" };
+  Object.entries(formularios).forEach(([m, sel]) => ($(sel).hidden = m !== modo));
+  mensaje(aviso, tipo);
+  $(formularios[modo]).querySelector("input").focus();
+}
+
+async function enviarFormulario(form, fn) {
+  form.classList.add("validado");
+  const malo = [...form.querySelectorAll("input")].find((i) => !i.checkValidity());
+  if (malo) { malo.focus(); return errorForm(form, "Revisa los campos marcados."); }
+  errorForm(form, "");
+  const btn = form.querySelector('button[type="submit"]');
+  const texto = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="girando" aria-hidden="true"></span> Un momento…`;
+  try { await fn(); } finally { btn.disabled = false; btn.textContent = texto; }
+}
+
+$("#form-entrar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = e.target;
+  enviarFormulario(f, async () => {
+    const r = await Supa.auth.entrar(f.elements.identificador.value, f.elements.password.value);
+    if (!r.ok) return errorForm(f, r.error);
+    f.reset();
+    f.classList.remove("validado");
+    await abrirPanel();
+  });
+});
+
+$("#form-recuperar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = e.target;
+  enviarFormulario(f, async () => {
+    const r = await Supa.auth.recuperar(f.elements.email.value.trim());
+    // Por privacidad no se dice si ese email tiene cuenta: solo se avisa de fallos de conexión o de demasiados intentos
+    if (!r.ok && (r.status === 0 || r.status === 429 || r.status >= 500)) return errorForm(f, r.error);
+    f.reset();
+    mostrarAcceso("entrar", "Si ese email tiene una cuenta, te llegará en unos minutos un enlace para poner una contraseña nueva.", "ok");
+  });
+});
+
+$("#form-nueva-clave").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const f = e.target;
+  enviarFormulario(f, async () => {
+    const r = await Supa.auth.cambiarClave(f.elements.password.value);
+    if (!r.ok) return errorForm(f, r.error);
+    f.reset();
+    await abrirPanel();
+    avisar("Contraseña cambiada ✓");
+  });
+});
+
+$("#acceso").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-modo]");
+  if (b) mostrarAcceso(b.dataset.modo);
+});
+
+async function salir(aviso = "", tipo = "ok") {
+  await Supa.auth.salir();
+  estado.reservas = []; estado.actividades = []; estado.usuarios = []; estado.yo = null;
+  clearTimeout(temporizador);
+  // Que no quede nada de datos de alumnos en la página tras salir
+  ["#lista-reservas", "#resumen-reservas", "#lista-cursos", "#lista-talleres", "#lista-usuarios", "#campos-horario"].forEach((s) => ($(s).innerHTML = ""));
+  $("#form-escuela").reset();
+  if ($("#dialogo-actividad").open) $("#dialogo-actividad").close();
+  mostrarAcceso("entrar", aviso, tipo);
+}
+
+// Cierre automático tras un rato sin usarla (por si se queda abierta en un ordenador compartido)
+let temporizador;
+function vigilarInactividad() {
+  clearTimeout(temporizador);
+  if (!estado.yo) return;
+  temporizador = setTimeout(() => salir("Se ha cerrado la sesión tras un rato sin usar la intranet.", "alerta"), MINUTOS_INACTIVIDAD * 60_000);
+}
+["click", "keydown", "scroll"].forEach((ev) => document.addEventListener(ev, vigilarInactividad, { passive: true }));
+
+// Comprueba que la sesión es de administración y enseña el panel
+async function abrirPanel() {
+  const s = Supa.auth.sesion();
+  if (!s) return mostrarAcceso("entrar");
+  $("#acceso").hidden = true;
+  $("#cargando").hidden = false;
   const r = await Supa.rest(`perfiles?select=id,usuario,nombre,rol&id=eq.${encodeURIComponent(s.user?.id)}`);
-  if (r.status === 401) return location.replace("cuenta.html?volver=admin");
-  const yo = r.ok && r.datos[0];
+  if (r.status === 401) return salir("Tu sesión ha caducado. Vuelve a entrar.", "alerta");
+  if (!r.ok) {
+    return sinAcceso(`<h2>No se ha podido comprobar tu acceso</h2><p>${escapar(r.error)}</p><p><button class="btn btn-secundario" id="reintentar">Reintentar</button></p>`);
+  }
+  const yo = r.datos[0];
   if (!yo || yo.rol !== "admin") {
-    if (yo) Supa.auth.recordarRol(yo.rol);
-    return sinAcceso(`<h2>No tienes acceso a la intranet</h2>
-      <p>${r.ok ? "Tu cuenta no tiene el rol de administración. Si trabajas en la escuela, pide a quien la gestiona que te lo dé desde <em>Usuarios</em>." : escapar(r.error)}</p>
-      <p><a class="btn btn-secundario" href="cuenta.html">Ir a mi cuenta</a> <a class="btn btn-secundario" href="./">Volver a la web</a></p>`);
+    return salir("Esta cuenta no tiene acceso a la intranet. Si trabajas en la escuela, pide a quien la gestiona que te dé el rol de administración.", "alerta");
   }
   estado.yo = yo;
   Supa.auth.recordarRol("admin");
   $("#cargando").hidden = true;
+  $("#sin-acceso").hidden = true;
   $("#menu").hidden = false;
   $("#cabecera-usuario").hidden = false;
   $("#admin-nombre").textContent = `@${yo.usuario}`;
+  vigilarInactividad();
 
   const inicial = location.hash.slice(1);
   mostrarSeccion(["reservas", "actividades", "escuela", "usuarios"].includes(inicial) ? inicial : "reservas");
   await Promise.all([cargarReservas(), cargarActividades(), cargarEscuela()]);
+}
+
+async function iniciar() {
+  $("#ver-web").href = WEB_PUBLICA;
+  if (!Supa.activo) {
+    return sinAcceso(`<h2>Falta conectar Supabase</h2><p>Pon la clave pública en <code>config.js</code> (<code>SUPABASE.clave</code>) y ejecuta <code>supabase/esquema.sql</code> en el SQL Editor de Supabase. Los pasos están en el README.</p>`);
+  }
+  // Vuelta desde el email de "nueva contraseña"
+  const enlace = await Supa.auth.desdeEnlace();
+  if (enlace?.error) return mostrarAcceso("recuperar", enlace.error);
+  if (enlace?.tipo === "recovery") return mostrarAcceso("nueva");
+  await abrirPanel();
 }
 
 // ---------- Eventos ----------
@@ -403,7 +513,8 @@ $("#recargar-reservas").addEventListener("click", async () => { await cargarRese
 $("#form-actividad").addEventListener("submit", guardarActividad);
 $("#form-escuela").addEventListener("submit", guardarEscuela);
 $("#dialogo-actividad").addEventListener("click", (e) => { if (e.target === $("#dialogo-actividad")) $("#dialogo-actividad").close(); });
-$("#salir").addEventListener("click", async () => { await Supa.auth.salir(); location.replace("cuenta.html"); });
+$("#salir").addEventListener("click", () => salir("Has salido de la intranet."));
+$("#sin-acceso").addEventListener("click", (e) => { if (e.target.id === "reintentar") abrirPanel(); });
 
 document.addEventListener("change", (e) => {
   const d = e.target.dataset;

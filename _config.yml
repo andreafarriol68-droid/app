@@ -1,0 +1,5 @@
+# GitHub Pages: carpetas que NO se publican con la web pública.
+# La intranet se publica aparte, en su propia dirección (ver README → Intranet).
+exclude:
+  - intranet
+  - supabase

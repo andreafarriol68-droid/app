@@ -2,7 +2,7 @@
 // Los cambios en datos.js y en las fotos se ven solos. Si añades una foto con
 // un nombre nuevo, ponla en ARCHIVOS y sube el número de VERSION.
 
-const VERSION = "v4";
+const VERSION = "v6";
 const CACHE = `misegueta-${VERSION}`;
 
 const ARCHIVOS = [
@@ -14,6 +14,7 @@ const ARCHIVOS = [
   "supa.js",
   "cuenta.html",
   "cuenta.js",
+  "asistente.js",
   "chat.js",
   "privacidad.html",
   "privacidad.js",
@@ -56,6 +57,7 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return; // las reservas (Formspree) van siempre por internet
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // solo se guardan archivos de esta web
+  if (url.pathname.includes("/intranet/")) return; // la intranet es otra app: nunca se guarda aquí
 
   // Fotos y fuentes: se enseña lo guardado al momento y se actualiza por detrás
   // (si cambias una foto por otra con el mismo nombre, se ve la nueva la siguiente vez)

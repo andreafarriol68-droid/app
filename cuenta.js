@@ -65,9 +65,6 @@ function modoAcceso(modo) {
   $(formularios[modo]).querySelector("input")?.focus();
 }
 
-// Si venía de la intranet (admin.html), se vuelve allí al entrar
-const volver = new URLSearchParams(location.search).get("volver") === "admin" ? "admin.html" : null;
-
 async function pintarCuenta() {
   const s = Supa.auth.sesion();
   if (!s) return modoAcceso("entrar");
@@ -79,13 +76,9 @@ async function pintarCuenta() {
   ]);
   if (!perfil.ok && perfil.status === 401) { await Supa.auth.salir(); return modoAcceso("entrar"); }
   const p = perfil.datos?.[0] || {};
-  Supa.auth.recordarRol(p.rol || "");
-  if (volver && p.rol === "admin") { location.replace(volver); return; }
 
   $("#cuenta-usuario").textContent = p.usuario ? `@${p.usuario}` : "";
   $("#cuenta-saludo").textContent = p.nombre ? `Hola, ${p.nombre.split(" ")[0]}` : "Mi cuenta";
-  $("#ir-intranet").hidden = p.rol !== "admin";
-  if (volver && p.rol !== "admin") mensaje("Tu cuenta no tiene permiso para entrar en la intranet. Si trabajas en la escuela, pide a la administración que te dé acceso.", "alerta");
 
   const f = $("#form-perfil");
   f.elements.email.value = s.user?.email || "";
